@@ -42,6 +42,17 @@ export function initDb(path: string): Database {
 export function resetDb(): void {
   if (db) {
     db.exec("DELETE FROM user_activity");
+    // Reset prepared statements so they're recreated for the new data
+    _upsertActivity = undefined;
+    _getUser = undefined;
+    _getUsersToWarnRole = undefined;
+    _getUsersToWarnKick = undefined;
+    _markWarned = undefined;
+    _getUsersToStrip = undefined;
+    _markRoleRemoved = undefined;
+    _getUsersToKick = undefined;
+    _deleteUser = undefined;
+    _getAllUsers = undefined;
   }
 }
 
@@ -54,7 +65,7 @@ export function closeDb(): void {
 
 // --- Prepared statements (lazy initialization) ---
 
-let _upsertActivity: Statement;
+let _upsertActivity: Statement | undefined;
 export function upsertActivity(
   userId: string,
   guildId: string,
@@ -75,7 +86,7 @@ export function upsertActivity(
   _upsertActivity.run(userId, guildId, timestamp);
 }
 
-let _getUser: Statement;
+let _getUser: Statement | undefined;
 export interface UserActivity {
   user_id: string;
   guild_id: string;
@@ -89,10 +100,11 @@ export function getUser(userId: string): UserActivity | undefined {
   if (!_getUser) {
     _getUser = getDb().prepare("SELECT * FROM user_activity WHERE user_id = ?");
   }
-  return _getUser.get(userId) as UserActivity | undefined;
+  const result = _getUser.get(userId) as UserActivity | null;
+  return result || undefined;
 }
 
-let _getUsersToWarnRole: Statement;
+let _getUsersToWarnRole: Statement | undefined;
 export function getUsersToWarnRole(
   expireTime: number,
 ): { user_id: string; guild_id: string }[] {
@@ -152,7 +164,7 @@ export function getUsersToStrip(
       WHERE last_message_at < ?
         AND has_role = 1
         AND warn_type = 'role'
-        AND warned_at < ?
+        AND warned_at <= ?
     `);
   }
   return _getUsersToStrip.all(expireTime, warnedBefore) as {
@@ -181,7 +193,7 @@ export function getUsersToKick(
       SELECT user_id, guild_id FROM user_activity
       WHERE last_message_at < ?
         AND warn_type = 'kick'
-        AND warned_at < ?
+        AND warned_at <= ?
     `);
   }
   return _getUsersToKick.all(expireTime, warnedBefore) as {
@@ -200,7 +212,7 @@ export function deleteUser(userId: string): void {
   _deleteUser.run(userId);
 }
 
-let _getAllUsers: Statement;
+let _getAllUsers: Statement | undefined;
 export function getAllUsers(): UserActivity[] {
   if (!_getAllUsers) {
     _getAllUsers = getDb().prepare("SELECT * FROM user_activity");

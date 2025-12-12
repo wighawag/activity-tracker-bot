@@ -87,7 +87,11 @@ export async function sweep(deps: SweepDeps): Promise<{
       `⚠️ You will lose the **${CONFIG.ACTIVE_ROLE_NAME}** role in **${guild.name}** soon due to inactivity. Click the button below to stay active!`,
     );
     if (sent) {
-      db.markWarned(now, "role", user_id);
+      // Only mark as role warned if they don't have a kick warning
+      const user = db.getUser(user_id);
+      if (!user || user.warn_type !== "kick") {
+        db.markWarned(now, "role", user_id);
+      }
       stats.roleWarnings++;
     }
   }
