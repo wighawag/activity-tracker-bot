@@ -1,0 +1,26 @@
+{
+  "name": "discord-active-bot",
+  "type": "module",
+  "dependencies": {
+    "@sapphire/framework": "^5.2.0",
+    "@sapphire/decorators": "^6.0.0",
+    "discord.js": "^14.14.1",
+    "better-sqlite3": "^9.2.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "@types/better-sqlite3": "^7.6.8"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir=dist",
+    "start": "bun dist/index.js",
+    "dev": "bun --watch src/index.ts",
+    "register": "bun src/register-commands.ts",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:coverage": "bun test --coverage",
+    "test:docker": "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit"
+  }
+}
