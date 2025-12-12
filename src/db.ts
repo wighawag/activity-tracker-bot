@@ -1,17 +1,17 @@
-import Database from "better-sqlite3";
 import { readFileSync } from "node:fs";
 import { getDbPath } from "./config.js";
+import Database, { Statement } from "bun:sqlite";
 
-let db: Database.Database;
+let db: Database;
 
-export function getDb(): Database.Database {
+export function getDb(): Database {
   if (!db) {
     db = initDb(getDbPath());
   }
   return db;
 }
 
-export function initDb(path: string): Database.Database {
+export function initDb(path: string): Database {
   const database = new Database(path);
 
   // Read schema and execute
@@ -54,7 +54,7 @@ export function closeDb(): void {
 
 // --- Prepared statements (lazy initialization) ---
 
-let _upsertActivity: Database.Statement;
+let _upsertActivity: Statement;
 export function upsertActivity(
   userId: string,
   guildId: string,
@@ -75,7 +75,7 @@ export function upsertActivity(
   _upsertActivity.run(userId, guildId, timestamp);
 }
 
-let _getUser: Database.Statement;
+let _getUser: Statement;
 export interface UserActivity {
   user_id: string;
   guild_id: string;
@@ -92,7 +92,7 @@ export function getUser(userId: string): UserActivity | undefined {
   return _getUser.get(userId) as UserActivity | undefined;
 }
 
-let _getUsersToWarnRole: Database.Statement;
+let _getUsersToWarnRole: Statement;
 export function getUsersToWarnRole(
   expireTime: number,
 ): { user_id: string; guild_id: string }[] {
@@ -110,7 +110,7 @@ export function getUsersToWarnRole(
   }[];
 }
 
-let _getUsersToWarnKick: Database.Statement;
+let _getUsersToWarnKick: Statement;
 export function getUsersToWarnKick(
   expireTime: number,
 ): { user_id: string; guild_id: string }[] {
@@ -127,7 +127,7 @@ export function getUsersToWarnKick(
   }[];
 }
 
-let _markWarned: Database.Statement;
+let _markWarned: Statement;
 export function markWarned(
   timestamp: number,
   warnType: string,
@@ -141,7 +141,7 @@ export function markWarned(
   _markWarned.run(timestamp, warnType, userId);
 }
 
-let _getUsersToStrip: Database.Statement;
+let _getUsersToStrip: Statement;
 export function getUsersToStrip(
   expireTime: number,
   warnedBefore: number,
@@ -161,7 +161,7 @@ export function getUsersToStrip(
   }[];
 }
 
-let _markRoleRemoved: Database.Statement;
+let _markRoleRemoved: Statement;
 export function markRoleRemoved(userId: string): void {
   if (!_markRoleRemoved) {
     _markRoleRemoved = getDb().prepare(
@@ -171,7 +171,7 @@ export function markRoleRemoved(userId: string): void {
   _markRoleRemoved.run(userId);
 }
 
-let _getUsersToKick: Database.Statement;
+let _getUsersToKick: Statement;
 export function getUsersToKick(
   expireTime: number,
   warnedBefore: number,
@@ -190,7 +190,7 @@ export function getUsersToKick(
   }[];
 }
 
-let _deleteUser: Database.Statement;
+let _deleteUser: Statement;
 export function deleteUser(userId: string): void {
   if (!_deleteUser) {
     _deleteUser = getDb().prepare(
@@ -200,7 +200,7 @@ export function deleteUser(userId: string): void {
   _deleteUser.run(userId);
 }
 
-let _getAllUsers: Database.Statement;
+let _getAllUsers: Statement;
 export function getAllUsers(): UserActivity[] {
   if (!_getAllUsers) {
     _getAllUsers = getDb().prepare("SELECT * FROM user_activity");

@@ -19,8 +19,9 @@ const client = new SapphireClient({
     GatewayIntentBits.DirectMessages,
   ],
   loadMessageCommandListeners: true,
-  auth: CONFIG.DISCORD_TOKEN,
 });
+
+client.login(CONFIG.DISCORD_TOKEN);
 
 function refreshActivity(userId: string, guildId: string): void {
   db.upsertActivity(userId, guildId, Date.now());

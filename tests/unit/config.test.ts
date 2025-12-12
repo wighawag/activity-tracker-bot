@@ -4,8 +4,8 @@ describe("config", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    // Reset module cache
-    jest.resetModules?.();
+    // Reset module cache by re-importing
+    delete require.cache[require.resolve("../../src/config.js")];
   });
 
   afterEach(() => {

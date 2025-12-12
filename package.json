@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "bun-types": "latest",
-    "@types/better-sqlite3": "^7.6.8"
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/bun": "latest"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir=dist",
@@ -22,5 +23,10 @@
     "test:integration": "bun test tests/integration",
     "test:coverage": "bun test --coverage",
     "test:docker": "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit"
+  },
+  "module": "src/index.ts",
+  "private": true,
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

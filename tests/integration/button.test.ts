@@ -65,7 +65,7 @@ describe("button handler - activity registration", () => {
     expect(user?.warn_type).toBeNull();
   });
 
-  it("should restore role flag when button is pressed after role removal", () => {
+  it("should restore role flag when button is pressed after role removal", async () => {
     const now = Date.now();
 
     upsertActivity("user1", "guild1", now - 20 * 24 * 60 * 60 * 1000);

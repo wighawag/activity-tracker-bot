@@ -69,7 +69,7 @@ describe("db", () => {
       const toWarn = getUsersToWarnRole(3000);
 
       expect(toWarn.length).toBe(1);
-      expect(toWarn[0].user_id).toBe("user1");
+      expect(toWarn[0]!.user_id).toBe("user1");
     });
 
     it("should not return already warned users", () => {
@@ -100,7 +100,7 @@ describe("db", () => {
       const toStrip = getUsersToStrip(3000, 5000);
 
       expect(toStrip.length).toBe(1);
-      expect(toStrip[0].user_id).toBe("user1");
+      expect(toStrip[0]!.user_id).toBe("user1");
     });
 
     it("should not return users warned too recently", () => {
