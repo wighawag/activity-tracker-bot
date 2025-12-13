@@ -15,7 +15,7 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir=dist",
+    "build": "bun build src/index.ts --outdir=dist --target bun",
     "start": "bun dist/index.js",
     "dev": "bun --watch src/index.ts",
     "register": "bun src/register-commands.ts",
