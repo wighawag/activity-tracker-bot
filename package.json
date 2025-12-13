@@ -1,9 +1,14 @@
 {
   "name": "discord-active-bot",
   "type": "module",
+  "module": "src/index.ts",
+  "private": true,
   "dependencies": {
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   },
   "devDependencies": {
     "bun-types": "latest",
@@ -19,10 +24,5 @@
     "test:integration": "bun test tests/integration",
     "test:coverage": "bun test --coverage",
     "test:docker": "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit"
-  },
-  "module": "src/index.ts",
-  "private": true,
-  "peerDependencies": {
-    "typescript": "^5"
   }
 }
