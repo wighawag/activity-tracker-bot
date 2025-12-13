@@ -122,7 +122,7 @@ export function getUsersToWarnRole(
   }[];
 }
 
-let _getUsersToWarnKick: Statement;
+let _getUsersToWarnKick: Statement | undefined;
 export function getUsersToWarnKick(
   expireTime: number,
 ): { user_id: string; guild_id: string }[] {
@@ -139,7 +139,7 @@ export function getUsersToWarnKick(
   }[];
 }
 
-let _markWarned: Statement;
+let _markWarned: Statement | undefined;
 export function markWarned(
   timestamp: number,
   warnType: string,
@@ -153,7 +153,7 @@ export function markWarned(
   _markWarned.run(timestamp, warnType, userId);
 }
 
-let _getUsersToStrip: Statement;
+let _getUsersToStrip: Statement | undefined;
 export function getUsersToStrip(
   expireTime: number,
   warnedBefore: number,
@@ -173,7 +173,7 @@ export function getUsersToStrip(
   }[];
 }
 
-let _markRoleRemoved: Statement;
+let _markRoleRemoved: Statement | undefined;
 export function markRoleRemoved(userId: string): void {
   if (!_markRoleRemoved) {
     _markRoleRemoved = getDb().prepare(
@@ -183,7 +183,7 @@ export function markRoleRemoved(userId: string): void {
   _markRoleRemoved.run(userId);
 }
 
-let _getUsersToKick: Statement;
+let _getUsersToKick: Statement | undefined;
 export function getUsersToKick(
   expireTime: number,
   warnedBefore: number,
@@ -202,7 +202,7 @@ export function getUsersToKick(
   }[];
 }
 
-let _deleteUser: Statement;
+let _deleteUser: Statement | undefined;
 export function deleteUser(userId: string): void {
   if (!_deleteUser) {
     _deleteUser = getDb().prepare(
