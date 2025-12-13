@@ -53,6 +53,21 @@ async function main() {
     logWithTimestamp(`🚀 Logged in as ${client.user?.tag}!`);
 
     try {
+      // Verify required roles exist in all guilds
+      logWithTimestamp("🔍 Verifying required roles exist...");
+      const guilds = await client.guilds.fetch();
+      for (const guild of guilds.values()) {
+        const fetchedGuild = await guild.fetch();
+        const roleNames = [config.ACTIVE_ROLE_NAME, config.INACTIVE_ROLE_NAME, config.DORMANT_ROLE_NAME];
+        for (const roleName of roleNames) {
+          const role = fetchedGuild.roles.cache.find(r => r.name === roleName);
+          if (!role) {
+            throw new Error(`Required role "${roleName}" does not exist in guild "${fetchedGuild.name}". Please create it manually before starting the bot.`);
+          }
+        }
+      }
+      logWithTimestamp("✅ All required roles verified");
+
       // Note: Slash commands are registered separately using `bun run register`
       // This avoids unnecessary API calls on every bot restart
 
