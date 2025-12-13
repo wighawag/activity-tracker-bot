@@ -46,9 +46,11 @@ export function resetDb(): void {
     _upsertActivity = undefined;
     _getUser = undefined;
     _getUsersToWarnRole = undefined;
+    _getUsersToWarnDormant = undefined;
     _getUsersToWarnKick = undefined;
     _markWarned = undefined;
     _getUsersToStrip = undefined;
+    _getUsersToMarkDormant = undefined;
     _markRoleRemoved = undefined;
     _getUsersToKick = undefined;
     _deleteUser = undefined;
@@ -125,6 +127,24 @@ export function getUsersToWarnRole(
   }[];
 }
 
+let _getUsersToWarnDormant: Statement | undefined;
+export function getUsersToWarnDormant(
+  expireTime: number,
+): { user_id: string; guild_id: string }[] {
+  if (!_getUsersToWarnDormant) {
+    _getUsersToWarnDormant = getDb().prepare(`
+      SELECT user_id, guild_id FROM user_activity
+      WHERE last_message_at < ?
+        AND user_role = 'inactive'
+        AND (warned_at IS NULL OR warn_type != 'dormant')
+    `);
+  }
+  return _getUsersToWarnDormant.all(expireTime) as {
+    user_id: string;
+    guild_id: string;
+  }[];
+}
+
 let _getUsersToWarnKick: Statement | undefined;
 export function getUsersToWarnKick(
   expireTime: number,
@@ -171,6 +191,26 @@ export function getUsersToStrip(
     `);
   }
   return _getUsersToStrip.all(expireTime, warnedBefore) as {
+    user_id: string;
+    guild_id: string;
+  }[];
+}
+
+let _getUsersToMarkDormant: Statement | undefined;
+export function getUsersToMarkDormant(
+  expireTime: number,
+  warnedBefore: number,
+): { user_id: string; guild_id: string }[] {
+  if (!_getUsersToMarkDormant) {
+    _getUsersToMarkDormant = getDb().prepare(`
+      SELECT user_id, guild_id FROM user_activity
+      WHERE last_message_at < ?
+        AND user_role = 'inactive'
+        AND warn_type = 'dormant'
+        AND warned_at <= ?
+    `);
+  }
+  return _getUsersToMarkDormant.all(expireTime, warnedBefore) as {
     user_id: string;
     guild_id: string;
   }[];

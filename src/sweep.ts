@@ -61,11 +61,15 @@ export interface SweepDeps {
 export async function sweep(deps: SweepDeps): Promise<{
   roleWarnings: number;
   roleRemovals: number;
+  dormantWarnings: number;
+  dormantTransitions: number;
 }> {
   const now = deps.now();
   const stats = {
     roleWarnings: 0,
     roleRemovals: 0,
+    dormantWarnings: 0,
+    dormantTransitions: 0,
     kickWarnings: 0,
     kicks: 0,
   };
@@ -111,6 +115,47 @@ export async function sweep(deps: SweepDeps): Promise<{
         `Hey! You've been moved to the **${CONFIG.INACTIVE_ROLE_NAME}** role in **${guild.name}** due to inactivity. Chat again or click the button to get your **${CONFIG.ACTIVE_ROLE_NAME}** role back!`,
       );
     }
+  }
+
+  /* ======== DORMANT WARNINGS ======== */
+  // For users who are inactive but approaching dormant threshold
+  const expireDormant = now - CONFIG.DORMANT_AFTER_MS;
+  const toWarnDormant = db.getUsersToWarnDormant(expireDormant);
+
+  for (const { user_id, guild_id } of toWarnDormant) {
+    const guild = deps.client.guilds.cache.get(guild_id);
+    if (!guild) continue;
+
+    const sent = await deps.sendWarning(
+      user_id,
+      guild_id,
+      `⚠️ You will be marked as **${CONFIG.DORMANT_ROLE_NAME}** in **${guild.name}** soon due to prolonged inactivity. Click the button below to stay active!`,
+    );
+    if (sent) {
+      db.markWarned(now, "dormant", user_id);
+      stats.dormantWarnings++;
+    }
+  }
+
+  /* ======== DORMANT TRANSITION (inactive → dormant) ======== */
+  const toMarkDormant = db.getUsersToMarkDormant(
+    expireDormant,
+    now - CONFIG.WARN_GRACE_MS,
+  );
+
+  for (const { user_id, guild_id } of toMarkDormant) {
+    const guild = deps.client.guilds.cache.get(guild_id);
+    if (!guild) continue;
+
+    // Update user role to dormant in database
+    db.updateUserRole(user_id, "dormant");
+    stats.dormantTransitions++;
+
+    await deps.sendWarning(
+      user_id,
+      guild_id,
+      `Hey! You've been marked as **${CONFIG.DORMANT_ROLE_NAME}** in **${guild.name}** due to prolonged inactivity. Contact an admin if you want to return.`,
+    );
   }
 
   return stats;

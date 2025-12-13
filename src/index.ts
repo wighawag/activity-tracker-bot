@@ -53,12 +53,17 @@ client.on("messageCreate", async (msg) => {
 
   refreshActivity(msg.author.id, guild.id);
 
-  // If user doesn't have any of the three roles, assign active role
-  if (
-    !member.roles.cache.has(activeRole.id) &&
-    (!inactiveRole || !member.roles.cache.has(inactiveRole.id)) &&
-    (!dormantRole || !member.roles.cache.has(dormantRole.id))
-  ) {
+  // Always assign active role on message create, regardless of current role status
+  // First remove inactive and dormant roles if they exist
+  if (inactiveRole && member.roles.cache.has(inactiveRole.id)) {
+    await member.roles.remove(inactiveRole).catch(() => {});
+  }
+  if (dormantRole && member.roles.cache.has(dormantRole.id)) {
+    await member.roles.remove(dormantRole).catch(() => {});
+  }
+
+  // Add active role
+  if (!member.roles.cache.has(activeRole.id)) {
     await member.roles.add(activeRole).catch(() => {});
   }
 });

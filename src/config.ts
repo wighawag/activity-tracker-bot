@@ -13,6 +13,9 @@ export const CONFIG = {
   INACTIVE_AFTER_MS: parseInt(
     process.env.INACTIVE_AFTER_MS || String(10 * 24 * 60 * 60 * 1000),
   ), // 10 days
+  DORMANT_AFTER_MS: parseInt(
+    process.env.DORMANT_AFTER_MS || String(30 * 24 * 60 * 60 * 1000),
+  ), // 30 days
   WARN_GRACE_MS: parseInt(
     process.env.WARN_GRACE_MS || String(3 * 24 * 60 * 60 * 1000),
   ), // 3 days
