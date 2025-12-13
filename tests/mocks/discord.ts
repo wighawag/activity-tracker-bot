@@ -1,4 +1,5 @@
 import { Collection, PermissionFlagsBits } from "discord.js";
+import { mock } from "bun:test";
 
 export interface MockRole {
   id: string;
@@ -132,8 +133,8 @@ export interface MockChatInputCommandInteraction {
   guildId: string | null;
   user: { id: string };
   memberPermissions: { has: (permission: bigint) => boolean };
-  reply: jest.Mock;
-  deferReply: jest.Mock;
+  reply: ReturnType<typeof mock>;
+  deferReply: ReturnType<typeof mock>;
   client: any;
   commandName: string;
 }
@@ -142,9 +143,9 @@ export interface MockButtonInteraction {
   guildId: string | null;
   user: { id: string };
   customId: string;
-  reply: jest.Mock;
-  update: jest.Mock;
-  deferReply: jest.Mock;
+  reply: ReturnType<typeof mock>;
+  update: ReturnType<typeof mock>;
+  deferReply: ReturnType<typeof mock>;
   client: any;
 }
 
@@ -164,8 +165,8 @@ export function createMockChatInputCommandInteraction(options: {
         return false;
       },
     },
-    reply: jest.fn().mockResolvedValue({}),
-    deferReply: jest.fn().mockResolvedValue({}),
+    reply: mock().mockResolvedValue({}),
+    deferReply: mock().mockResolvedValue({}),
     client: {},
     commandName: "kick-dormant",
   };
@@ -181,9 +182,9 @@ export function createMockButtonInteraction(options: {
     guildId: options.guildId,
     user: { id: options.userId },
     customId: options.customId,
-    reply: jest.fn().mockResolvedValue({}),
-    update: jest.fn().mockResolvedValue({}),
-    deferReply: jest.fn().mockResolvedValue({}),
+    reply: mock().mockResolvedValue({}),
+    update: mock().mockResolvedValue({}),
+    deferReply: mock().mockResolvedValue({}),
     client: options.client || {},
   };
 }
