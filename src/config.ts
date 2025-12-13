@@ -23,5 +23,5 @@ export function getDbPath(): string {
   if (process.env.NODE_ENV === "test") {
     return ":memory:";
   }
-  return process.env.DB_PATH || "/app/data/activity.db";
+  return process.env.DB_PATH || "./activity.db";
 }
