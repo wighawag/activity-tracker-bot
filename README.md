@@ -128,7 +128,6 @@ FALLBACK_CHANNEL_ID=your_fallback_channel_id_here
 # Optional: override default timings (in milliseconds)
 # INACTIVE_AFTER_MS=864000000  # 10 days
 # WARN_GRACE_MS=259200000      # 3 days
-# KICK_AFTER_MS=2592000000     # 30 days
 ```
 
 **Finding your APP_ID**:
