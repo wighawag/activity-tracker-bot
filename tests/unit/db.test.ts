@@ -5,13 +5,13 @@ import {
   upsertActivity,
   getUser,
   getUsersToWarnRole,
-  getUsersToWarnKick,
   markWarned,
   getUsersToStrip,
   markRoleRemoved,
-  getUsersToKick,
   deleteUser,
   getAllUsers,
+  updateUserRole,
+  getUsersByRole,
 } from "../../src/db.js";
 
 describe("db", () => {
@@ -29,7 +29,7 @@ describe("db", () => {
       expect(user?.user_id).toBe("user1");
       expect(user?.guild_id).toBe("guild1");
       expect(user?.last_message_at).toBe(1000);
-      expect(user?.has_role).toBe(1);
+      expect(user?.user_role).toBe("active");
       expect(user?.warned_at).toBeNull();
       expect(user?.warn_type).toBeNull();
     });
@@ -50,6 +50,7 @@ describe("db", () => {
       expect(user?.last_message_at).toBe(2000);
       expect(user?.warned_at).toBeNull();
       expect(user?.warn_type).toBeNull();
+      expect(user?.user_role).toBe("active");
     });
 
     it("should update guild_id on activity", () => {
@@ -81,9 +82,9 @@ describe("db", () => {
       expect(toWarn.length).toBe(0);
     });
 
-    it("should not return users without role", () => {
-      upsertActivity("user1", "guild1", 1000);
-      markRoleRemoved("user1");
+    it("should not return users with inactive role", () => {
+      upsertActivity("user1", "guild1", 1000, "active");
+      updateUserRole("user1", "inactive");
 
       const toWarn = getUsersToWarnRole(3000);
 
@@ -93,7 +94,7 @@ describe("db", () => {
 
   describe("getUsersToStrip", () => {
     it("should return users warned long enough ago", () => {
-      upsertActivity("user1", "guild1", 1000);
+      upsertActivity("user1", "guild1", 1000, "active");
       markWarned(2000, "role", "user1");
 
       // warning at 2000, grace period check at 5000 means warned_at < 5000
@@ -113,9 +114,9 @@ describe("db", () => {
       expect(toStrip.length).toBe(0);
     });
 
-    it("should not return users with kick warning type", () => {
-      upsertActivity("user1", "guild1", 1000);
-      markWarned(2000, "kick", "user1");
+    it("should not return users with inactive role", () => {
+      upsertActivity("user1", "guild1", 1000, "inactive");
+      markWarned(2000, "role", "user1");
 
       const toStrip = getUsersToStrip(3000, 5000);
 
@@ -123,57 +124,36 @@ describe("db", () => {
     });
   });
 
-  describe("getUsersToWarnKick", () => {
-    it("should return users with expired activity", () => {
-      upsertActivity("user1", "guild1", 1000);
+  describe("role management", () => {
+    it("should update user role", () => {
+      upsertActivity("user1", "guild1", 1000, "active");
+      updateUserRole("user1", "inactive");
 
-      const toWarn = getUsersToWarnKick(3000);
-
-      expect(toWarn.length).toBe(1);
+      const user = getUser("user1");
+      expect(user?.user_role).toBe("inactive");
     });
 
-    it("should not return users already warned for kick", () => {
-      upsertActivity("user1", "guild1", 1000);
-      markWarned(2000, "kick", "user1");
+    it("should get users by role", () => {
+      upsertActivity("user1", "guild1", 1000, "active");
+      upsertActivity("user2", "guild1", 2000, "inactive");
+      upsertActivity("user3", "guild1", 3000, "dormant");
 
-      const toWarn = getUsersToWarnKick(3000);
+      const activeUsers = getUsersByRole("active");
+      const inactiveUsers = getUsersByRole("inactive");
+      const dormantUsers = getUsersByRole("dormant");
 
-      expect(toWarn.length).toBe(0);
-    });
-
-    it("should return users warned for role but not kick", () => {
-      upsertActivity("user1", "guild1", 1000);
-      markWarned(2000, "role", "user1");
-
-      const toWarn = getUsersToWarnKick(3000);
-
-      expect(toWarn.length).toBe(1);
-    });
-  });
-
-  describe("getUsersToKick", () => {
-    it("should return users warned for kick long enough ago", () => {
-      upsertActivity("user1", "guild1", 1000);
-      markWarned(2000, "kick", "user1");
-
-      const toKick = getUsersToKick(3000, 5000);
-
-      expect(toKick.length).toBe(1);
-    });
-
-    it("should not return users warned too recently", () => {
-      upsertActivity("user1", "guild1", 1000);
-      markWarned(4000, "kick", "user1");
-
-      const toKick = getUsersToKick(3000, 3000);
-
-      expect(toKick.length).toBe(0);
+      expect(activeUsers.length).toBe(1);
+      expect(inactiveUsers.length).toBe(1);
+      expect(dormantUsers.length).toBe(1);
+      expect(activeUsers[0]?.user_id).toBe("user1");
+      expect(inactiveUsers[0]?.user_id).toBe("user2");
+      expect(dormantUsers[0]?.user_id).toBe("user3");
     });
   });
 
   describe("deleteUser", () => {
     it("should remove user from database", () => {
-      upsertActivity("user1", "guild1", 1000);
+      upsertActivity("user1", "guild1", 1000, "active");
       deleteUser("user1");
 
       const user = getUser("user1");
@@ -183,9 +163,9 @@ describe("db", () => {
 
   describe("getAllUsers", () => {
     it("should return all users", () => {
-      upsertActivity("user1", "guild1", 1000);
-      upsertActivity("user2", "guild1", 2000);
-      upsertActivity("user3", "guild2", 3000);
+      upsertActivity("user1", "guild1", 1000, "active");
+      upsertActivity("user2", "guild1", 2000, "inactive");
+      upsertActivity("user3", "guild2", 3000, "dormant");
 
       const users = getAllUsers();
 

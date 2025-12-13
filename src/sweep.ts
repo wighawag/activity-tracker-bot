@@ -5,6 +5,7 @@ import {
   Client,
   TextChannel,
 } from "discord.js";
+import { getDb } from "./db.js";
 import * as db from "./db.js";
 import { CONFIG } from "./config.js";
 
@@ -54,16 +55,12 @@ export interface SweepDeps {
     message: string,
   ) => Promise<boolean>;
   removeRole: (guildId: string, userId: string) => Promise<boolean>;
-  kickMember: (guildId: string, userId: string) => Promise<boolean>;
-  sendFarewell: (userId: string, message: string) => Promise<boolean>;
   now: () => number;
 }
 
 export async function sweep(deps: SweepDeps): Promise<{
   roleWarnings: number;
   roleRemovals: number;
-  kickWarnings: number;
-  kicks: number;
 }> {
   const now = deps.now();
   const stats = {
@@ -73,11 +70,12 @@ export async function sweep(deps: SweepDeps): Promise<{
     kicks: 0,
   };
 
-  /* ======== ROLE WARNINGS ======== */
-  const expireRole = now - CONFIG.INACTIVE_AFTER_MS;
-  const toWarnRole = db.getUsersToWarnRole(expireRole);
+  /* ======== INACTIVE WARNINGS ======== */
+  // For users who are active but approaching inactive threshold
+  const expireInactive = now - CONFIG.INACTIVE_AFTER_MS;
+  const toWarnInactive = db.getUsersToWarnRole(expireInactive);
 
-  for (const { user_id, guild_id } of toWarnRole) {
+  for (const { user_id, guild_id } of toWarnInactive) {
     const guild = deps.client.guilds.cache.get(guild_id);
     if (!guild) continue;
 
@@ -87,72 +85,42 @@ export async function sweep(deps: SweepDeps): Promise<{
       `⚠️ You will lose the **${CONFIG.ACTIVE_ROLE_NAME}** role in **${guild.name}** soon due to inactivity. Click the button below to stay active!`,
     );
     if (sent) {
-      // Only mark as role warned if they don't have a kick warning
-      const user = db.getUser(user_id);
-      if (!user || user.warn_type !== "kick") {
-        db.markWarned(now, "role", user_id);
-      }
+      db.markWarned(now, "role", user_id);
       stats.roleWarnings++;
     }
   }
 
-  /* ======== ROLE REMOVAL ======== */
-  const toStrip = db.getUsersToStrip(expireRole, now - CONFIG.WARN_GRACE_MS);
+  /* ======== ROLE TRANSITION (active → inactive) ======== */
+  const toTransition = db.getUsersToStrip(
+    expireInactive,
+    now - CONFIG.WARN_GRACE_MS,
+  );
 
-  for (const { user_id, guild_id } of toStrip) {
+  for (const { user_id, guild_id } of toTransition) {
     const guild = deps.client.guilds.cache.get(guild_id);
     if (!guild) continue;
 
     const removed = await deps.removeRole(guild_id, user_id);
     if (removed) {
-      db.markRoleRemoved(user_id);
+      db.updateUserRole(user_id, "inactive");
       stats.roleRemovals++;
 
       await deps.sendWarning(
         user_id,
         guild_id,
-        `Hey! You lost the **${CONFIG.ACTIVE_ROLE_NAME}** role in **${guild.name}** due to inactivity. Chat again or click the button to get it back!`,
+        `Hey! You've been moved to the **${CONFIG.INACTIVE_ROLE_NAME}** role in **${guild.name}** due to inactivity. Chat again or click the button to get your **${CONFIG.ACTIVE_ROLE_NAME}** role back!`,
       );
     }
   }
 
-  /* ======== KICK WARNINGS ======== */
-  const expireKick = now - CONFIG.KICK_AFTER_MS;
-  const toWarnKick = db.getUsersToWarnKick(expireKick);
-
-  for (const { user_id, guild_id } of toWarnKick) {
-    const guild = deps.client.guilds.cache.get(guild_id);
-    if (!guild) continue;
-
-    const sent = await deps.sendWarning(
-      user_id,
-      guild_id,
-      `⚠️ You will be **removed** from **${guild.name}** soon for prolonged inactivity. Click the button below to stay!`,
-    );
-    if (sent) {
-      db.markWarned(now, "kick", user_id);
-      stats.kickWarnings++;
-    }
-  }
-
-  /* ======== KICK ======== */
-  const toKick = db.getUsersToKick(expireKick, now - CONFIG.WARN_GRACE_MS);
-
-  for (const { user_id, guild_id } of toKick) {
-    const guild = deps.client.guilds.cache.get(guild_id);
-    if (!guild) continue;
-
-    await deps.sendFarewell(
-      user_id,
-      `You've been removed from **${guild.name}** for prolonged inactivity, but you're always welcome back whenever you feel like chatting again!`,
-    );
-
-    const kicked = await deps.kickMember(guild_id, user_id);
-    if (kicked) {
-      db.deleteUser(user_id);
-      stats.kicks++;
-    }
-  }
-
   return stats;
+}
+
+// New function to get dormant users for manual kicking
+export function getDormantUsers(): { user_id: string; guild_id: string }[] {
+  const stmt = getDb().prepare(`
+    SELECT user_id, guild_id FROM user_activity
+    WHERE user_role = 'dormant'
+  `);
+  return stmt.all() as { user_id: string; guild_id: string }[];
 }

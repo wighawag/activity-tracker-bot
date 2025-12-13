@@ -28,7 +28,7 @@ export function initDb(path: string): Database {
         user_id         TEXT PRIMARY KEY,
         guild_id        TEXT NOT NULL,
         last_message_at INTEGER NOT NULL,
-        has_role        INTEGER NOT NULL DEFAULT 0,
+        user_role       TEXT NOT NULL DEFAULT 'active',
         warned_at       INTEGER,
         warn_type       TEXT
       );
@@ -53,6 +53,8 @@ export function resetDb(): void {
     _getUsersToKick = undefined;
     _deleteUser = undefined;
     _getAllUsers = undefined;
+    _getUsersByRole = undefined;
+    _updateUserRole = undefined;
   }
 }
 
@@ -70,20 +72,21 @@ export function upsertActivity(
   userId: string,
   guildId: string,
   timestamp: number,
+  role: string = "active",
 ): void {
   if (!_upsertActivity) {
     _upsertActivity = getDb().prepare(`
-      INSERT INTO user_activity (user_id, guild_id, last_message_at, has_role)
-      VALUES (?, ?, ?, 1)
+      INSERT INTO user_activity (user_id, guild_id, last_message_at, user_role)
+      VALUES (?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         guild_id = excluded.guild_id,
         last_message_at = excluded.last_message_at,
-        has_role = 1,
+        user_role = excluded.user_role,
         warned_at = NULL,
         warn_type = NULL
     `);
   }
-  _upsertActivity.run(userId, guildId, timestamp);
+  _upsertActivity.run(userId, guildId, timestamp, role);
 }
 
 let _getUser: Statement | undefined;
@@ -91,7 +94,7 @@ export interface UserActivity {
   user_id: string;
   guild_id: string;
   last_message_at: number;
-  has_role: number;
+  user_role: string;
   warned_at: number | null;
   warn_type: string | null;
 }
@@ -112,7 +115,7 @@ export function getUsersToWarnRole(
     _getUsersToWarnRole = getDb().prepare(`
       SELECT user_id, guild_id FROM user_activity
       WHERE last_message_at < ?
-        AND has_role = 1
+        AND user_role = 'active'
         AND (warned_at IS NULL OR warn_type != 'role')
     `);
   }
@@ -162,7 +165,7 @@ export function getUsersToStrip(
     _getUsersToStrip = getDb().prepare(`
       SELECT user_id, guild_id FROM user_activity
       WHERE last_message_at < ?
-        AND has_role = 1
+        AND user_role = 'active'
         AND warn_type = 'role'
         AND warned_at <= ?
     `);
@@ -177,7 +180,7 @@ let _markRoleRemoved: Statement | undefined;
 export function markRoleRemoved(userId: string): void {
   if (!_markRoleRemoved) {
     _markRoleRemoved = getDb().prepare(
-      "UPDATE user_activity SET has_role = 0 WHERE user_id = ?",
+      "UPDATE user_activity SET user_role = 'inactive' WHERE user_id = ?",
     );
   }
   _markRoleRemoved.run(userId);
@@ -218,4 +221,24 @@ export function getAllUsers(): UserActivity[] {
     _getAllUsers = getDb().prepare("SELECT * FROM user_activity");
   }
   return _getAllUsers.all() as UserActivity[];
+}
+
+let _getUsersByRole: Statement | undefined;
+export function getUsersByRole(role: string): UserActivity[] {
+  if (!_getUsersByRole) {
+    _getUsersByRole = getDb().prepare(
+      "SELECT * FROM user_activity WHERE user_role = ?",
+    );
+  }
+  return _getUsersByRole.all(role) as UserActivity[];
+}
+
+let _updateUserRole: Statement | undefined;
+export function updateUserRole(userId: string, role: string): void {
+  if (!_updateUserRole) {
+    _updateUserRole = getDb().prepare(
+      "UPDATE user_activity SET user_role = ? WHERE user_id = ?",
+    );
+  }
+  _updateUserRole.run(role, userId);
 }

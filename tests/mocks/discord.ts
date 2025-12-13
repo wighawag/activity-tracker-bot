@@ -1,4 +1,4 @@
-import { Collection } from "discord.js";
+import { Collection, PermissionFlagsBits } from "discord.js";
 
 export interface MockRole {
   id: string;
@@ -125,6 +125,66 @@ export function createMockClient(
         return user;
       },
     },
+  };
+}
+
+export interface MockChatInputCommandInteraction {
+  guildId: string | null;
+  user: { id: string };
+  memberPermissions: { has: (permission: bigint) => boolean };
+  reply: jest.Mock;
+  deferReply: jest.Mock;
+  client: any;
+  commandName: string;
+}
+
+export interface MockButtonInteraction {
+  guildId: string | null;
+  user: { id: string };
+  customId: string;
+  reply: jest.Mock;
+  update: jest.Mock;
+  deferReply: jest.Mock;
+  client: any;
+}
+
+export function createMockChatInputCommandInteraction(options: {
+  guildId: string | null;
+  userId: string;
+  isAdmin: boolean;
+}): MockChatInputCommandInteraction {
+  return {
+    guildId: options.guildId,
+    user: { id: options.userId },
+    memberPermissions: {
+      has: (permission: bigint) => {
+        if (permission === PermissionFlagsBits.Administrator) {
+          return options.isAdmin;
+        }
+        return false;
+      },
+    },
+    reply: jest.fn().mockResolvedValue({}),
+    deferReply: jest.fn().mockResolvedValue({}),
+    client: {},
+    commandName: "kick-dormant",
+  };
+}
+
+export function createMockButtonInteraction(options: {
+  guildId: string | null;
+  userId: string;
+  customId: string;
+  client?: any;
+}): MockButtonInteraction {
+  return {
+    guildId: options.guildId,
+    user: { id: options.userId },
+    customId: options.customId,
+    reply: jest.fn().mockResolvedValue({}),
+    update: jest.fn().mockResolvedValue({}),
+    deferReply: jest.fn().mockResolvedValue({}),
+    client: options.client || {},
   };
 }
 

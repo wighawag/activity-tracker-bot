@@ -9,6 +9,11 @@ const cmds = [
     description: "Drop the activity button panel in this channel",
     type: ApplicationCommandType.ChatInput,
   },
+  {
+    name: "kick-dormant",
+    description: "Kick dormant users (admin only)",
+    type: ApplicationCommandType.ChatInput,
+  },
 ];
 
 (async () => {

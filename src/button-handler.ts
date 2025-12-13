@@ -30,13 +30,28 @@ export async function handleButtonInteraction(inter: ButtonInteraction) {
     });
   }
 
-  db.upsertActivity(inter.user.id, guildId, Date.now());
+  db.upsertActivity(inter.user.id, guildId, Date.now(), "active");
 
-  const role = member.guild.roles.cache.find(
+  // Find all three roles
+  const activeRole = member.guild.roles.cache.find(
     (r) => r.name === CONFIG.ACTIVE_ROLE_NAME,
   );
-  if (role && !member.roles.cache.has(role.id)) {
-    await member.roles.add(role).catch(() => {});
+  const inactiveRole = member.guild.roles.cache.find(
+    (r) => r.name === CONFIG.INACTIVE_ROLE_NAME,
+  );
+  const dormantRole = member.guild.roles.cache.find(
+    (r) => r.name === CONFIG.DORMANT_ROLE_NAME,
+  );
+
+  // Remove inactive and dormant roles, add active role
+  if (activeRole && !member.roles.cache.has(activeRole.id)) {
+    await member.roles.add(activeRole).catch(() => {});
+  }
+  if (inactiveRole && member.roles.cache.has(inactiveRole.id)) {
+    await member.roles.remove(inactiveRole).catch(() => {});
+  }
+  if (dormantRole && member.roles.cache.has(dormantRole.id)) {
+    await member.roles.remove(dormantRole).catch(() => {});
   }
 
   return inter.reply({

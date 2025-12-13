@@ -17,12 +17,13 @@ describe("config", () => {
 
     expect(CONFIG.INACTIVE_AFTER_MS).toBe(10 * 24 * 60 * 60 * 1000);
     expect(CONFIG.WARN_GRACE_MS).toBe(3 * 24 * 60 * 60 * 1000);
-    expect(CONFIG.KICK_AFTER_MS).toBe(30 * 24 * 60 * 60 * 1000);
   });
 
-  it("should have default role name", async () => {
+  it("should have default role names", async () => {
     const { CONFIG } = await import("../../src/config.js");
 
     expect(CONFIG.ACTIVE_ROLE_NAME).toBe("Active");
+    expect(CONFIG.INACTIVE_ROLE_NAME).toBe("Inactive");
+    expect(CONFIG.DORMANT_ROLE_NAME).toBe("Dormant");
   });
 });

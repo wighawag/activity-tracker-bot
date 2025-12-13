@@ -55,8 +55,6 @@ describe("sweep - role management", () => {
         return true;
       },
       removeRole: async () => false,
-      kickMember: async () => false,
-      sendFarewell: async () => false,
     };
 
     const stats = await sweep(deps);
@@ -68,6 +66,7 @@ describe("sweep - role management", () => {
     const userRecord = getUser("user1");
     expect(userRecord?.warn_type).toBe("role");
     expect(userRecord?.warned_at).toBeDefined();
+    expect(userRecord?.user_role).toBe("active");
   });
 
   it("should not warn users who are still active", async () => {
@@ -91,8 +90,6 @@ describe("sweep - role management", () => {
       now: () => now,
       sendWarning: async () => true,
       removeRole: async () => false,
-      kickMember: async () => false,
-      sendFarewell: async () => false,
     };
 
     const stats = await sweep(deps);
@@ -133,8 +130,6 @@ describe("sweep - role management", () => {
         roleRemoved = true;
         return true;
       },
-      kickMember: async () => false,
-      sendFarewell: async () => false,
     };
 
     const stats = await sweep(deps);
@@ -143,7 +138,7 @@ describe("sweep - role management", () => {
     expect(roleRemoved).toBe(true);
 
     const userRecord = getUser("user1");
-    expect(userRecord?.has_role).toBe(0);
+    expect(userRecord?.user_role).toBe("inactive");
   });
 
   it("should not remove role if grace period not passed", async () => {
@@ -171,8 +166,6 @@ describe("sweep - role management", () => {
       now: () => now,
       sendWarning: async () => true,
       removeRole: async () => true,
-      kickMember: async () => false,
-      sendFarewell: async () => false,
     };
 
     const stats = await sweep(deps);

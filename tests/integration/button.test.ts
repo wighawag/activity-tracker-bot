@@ -22,7 +22,7 @@ describe("button handler - activity registration", () => {
     expect(user).toBeDefined();
     expect(user?.user_id).toBe("user1");
     expect(user?.guild_id).toBe("guild1");
-    expect(user?.has_role).toBe(1);
+    expect(user?.user_role).toBe("active");
   });
 
   it("should reset warnings when button is pressed", () => {
@@ -36,6 +36,7 @@ describe("button handler - activity registration", () => {
     let user = getUser("user1");
     expect(user?.warned_at).not.toBeNull();
     expect(user?.warn_type).toBe("role");
+    expect(user?.user_role).toBe("active");
 
     // Simulate button press
     upsertActivity("user1", "guild1", now);
@@ -44,6 +45,7 @@ describe("button handler - activity registration", () => {
     expect(user?.warned_at).toBeNull();
     expect(user?.warn_type).toBeNull();
     expect(user?.last_message_at).toBe(now);
+    expect(user?.user_role).toBe("active");
   });
 
   it("should reset kick warnings when button is pressed", () => {
@@ -56,6 +58,7 @@ describe("button handler - activity registration", () => {
 
     let user = getUser("user1");
     expect(user?.warn_type).toBe("kick");
+    expect(user?.user_role).toBe("active");
 
     // Simulate button press
     upsertActivity("user1", "guild1", now);
@@ -63,6 +66,7 @@ describe("button handler - activity registration", () => {
     user = getUser("user1");
     expect(user?.warned_at).toBeNull();
     expect(user?.warn_type).toBeNull();
+    expect(user?.user_role).toBe("active");
   });
 
   it("should restore role flag when button is pressed after role removal", async () => {
@@ -72,18 +76,18 @@ describe("button handler - activity registration", () => {
 
     // Simulate role being removed
     const db = (await import("../../src/db.js")).getDb();
-    db.prepare("UPDATE user_activity SET has_role = 0 WHERE user_id = ?").run(
-      "user1",
-    );
+    db.prepare(
+      "UPDATE user_activity SET user_role = 'inactive' WHERE user_id = ?",
+    ).run("user1");
 
     let user = getUser("user1");
-    expect(user?.has_role).toBe(0);
+    expect(user?.user_role).toBe("inactive");
 
     // Simulate button press
     upsertActivity("user1", "guild1", now);
 
     user = getUser("user1");
-    expect(user?.has_role).toBe(1);
+    expect(user?.user_role).toBe("active");
   });
 
   it("should handle button press from user not in database", () => {
@@ -94,7 +98,7 @@ describe("button handler - activity registration", () => {
 
     const user = getUser("newuser");
     expect(user).toBeDefined();
-    expect(user?.has_role).toBe(1);
+    expect(user?.user_role).toBe("active");
     expect(user?.warned_at).toBeNull();
   });
 
