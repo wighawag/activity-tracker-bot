@@ -25,34 +25,65 @@ describe("RoleManagerService", () => {
   });
 
   it("should ensure roles exist", async () => {
-    // Track created roles
-    const createdRoles: any[] = [];
-
-    // Mock guild
+    // Mock guild with all roles present
     const mockGuild = {
+      name: "Test Guild",
       roles: {
         cache: {
-          find: (fn: any) => fn({ name: "Active" }),
-        },
-        create: (options: any) => {
-          const role = { name: options.name };
-          createdRoles.push(role);
-          return Promise.resolve(role);
+          find: (fn: any) => {
+            const role = { name: "Active" };
+            return fn(role) ? role : null;
+          },
         },
       },
     } as unknown as Guild;
 
+    // Mock find to return roles for all names
+    mockGuild.roles.cache.find = (fn: any) => {
+      const activeRole = { name: "Active" };
+      const inactiveRole = { name: "Inactive" };
+      const dormantRole = { name: "Dormant" };
+      if (fn(activeRole)) return activeRole;
+      if (fn(inactiveRole)) return inactiveRole;
+      if (fn(dormantRole)) return dormantRole;
+      return null;
+    };
+
     const roleMap = await roleManager.ensureRolesExist(mockGuild);
 
     expect(roleMap.size).toBe(3);
-    expect(createdRoles.length).toBe(2); // Inactive and Dormant
-    expect(createdRoles.some((r) => r.name === "Inactive")).toBeTrue();
-    expect(createdRoles.some((r) => r.name === "Dormant")).toBeTrue();
+    expect(roleMap.get("Active")).toBeDefined();
+    expect(roleMap.get("Inactive")).toBeDefined();
+    expect(roleMap.get("Dormant")).toBeDefined();
+  });
+
+  it("should throw error if role does not exist", async () => {
+    // Mock guild missing Inactive role
+    const mockGuild = {
+      name: "Test Guild",
+      roles: {
+        cache: {
+          find: (fn: any) => {
+            const activeRole = { name: "Active" };
+            const dormantRole = { name: "Dormant" };
+            if (fn(activeRole)) return activeRole;
+            if (fn(dormantRole)) return dormantRole;
+            return null; // Inactive missing
+          },
+        },
+      },
+    } as unknown as Guild;
+
+    await expect(roleManager.ensureRolesExist(mockGuild)).rejects.toThrow(
+      'Required role "Inactive" does not exist in guild "Test Guild". Please create it manually.'
+    );
   });
 
   it("should assign role to user", async () => {
-    // Mock role
-    const mockRole = { id: "role123", name: "Active" };
+    // Mock roles
+    const activeRole = { id: "role123", name: "Active" };
+    const inactiveRole = { id: "role124", name: "Inactive" };
+    const dormantRole = { id: "role125", name: "Dormant" };
 
     // Track calls
     let removeCalled = false;
@@ -63,9 +94,14 @@ describe("RoleManagerService", () => {
       id: "guild123",
       roles: {
         cache: {
-          find: (fn: any) => fn(mockRole),
+          find: (fn: any) => {
+            if (fn(activeRole)) return activeRole;
+            if (fn(inactiveRole)) return inactiveRole;
+            if (fn(dormantRole)) return dormantRole;
+            return null;
+          },
         },
-        create: () => Promise.resolve(mockRole),
+        create: () => Promise.resolve(activeRole),
       },
     } as unknown as Guild;
 
@@ -95,8 +131,10 @@ describe("RoleManagerService", () => {
   });
 
   it("should ensure user has role (new user)", async () => {
-    // Mock role
-    const mockRole = { id: "role123", name: "Active" };
+    // Mock roles
+    const activeRole = { id: "role123", name: "Active" };
+    const inactiveRole = { id: "role124", name: "Inactive" };
+    const dormantRole = { id: "role125", name: "Dormant" };
 
     // Track calls
     let addCalled = false;
@@ -106,9 +144,14 @@ describe("RoleManagerService", () => {
       id: "guild123",
       roles: {
         cache: {
-          find: (fn: any) => fn(mockRole),
+          find: (fn: any) => {
+            if (fn(activeRole)) return activeRole;
+            if (fn(inactiveRole)) return inactiveRole;
+            if (fn(dormantRole)) return dormantRole;
+            return null;
+          },
         },
-        create: () => Promise.resolve(mockRole),
+        create: () => Promise.resolve(activeRole),
       },
     } as unknown as Guild;
 
@@ -143,8 +186,10 @@ describe("RoleManagerService", () => {
         current_role: "inactive",
       });
 
-    // Mock role
-    const mockRole = { id: "role123", name: "Inactive" };
+    // Mock roles
+    const activeRole = { id: "role122", name: "Active" };
+    const inactiveRole = { id: "role123", name: "Inactive" };
+    const dormantRole = { id: "role124", name: "Dormant" };
 
     // Track calls
     let addCalled = false;
@@ -154,9 +199,14 @@ describe("RoleManagerService", () => {
       id: "guild123",
       roles: {
         cache: {
-          find: (fn: any) => fn(mockRole),
+          find: (fn: any) => {
+            if (fn(activeRole)) return activeRole;
+            if (fn(inactiveRole)) return inactiveRole;
+            if (fn(dormantRole)) return dormantRole;
+            return null;
+          },
         },
-        create: () => Promise.resolve(mockRole),
+        create: () => Promise.resolve(inactiveRole),
       },
     } as unknown as Guild;
 

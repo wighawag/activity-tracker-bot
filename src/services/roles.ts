@@ -27,8 +27,7 @@ export class RoleManagerService {
       if (existingRole) {
         roleMap.set(roleName, existingRole);
       } else {
-        const newRole = await guild.roles.create({ name: roleName });
-        roleMap.set(roleName, newRole);
+        throw new Error(`Required role "${roleName}" does not exist in guild "${guild.name}". Please create it manually.`);
       }
     }
 
