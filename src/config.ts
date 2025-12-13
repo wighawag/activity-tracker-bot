@@ -19,6 +19,7 @@ export const CONFIG = {
   WARN_GRACE_MS: parseInt(
     process.env.WARN_GRACE_MS || String(3 * 24 * 60 * 60 * 1000),
   ), // 3 days
+  SWEEP_INTERVAL_MS: parseInt(process.env.SWEEP_INTERVAL_MS || String(60_000)),
 } as const;
 
 export function getDbPath(): string {

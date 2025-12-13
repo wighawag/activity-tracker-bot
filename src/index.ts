@@ -233,4 +233,4 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 /* ---------- periodic sweep ---------- */
-setInterval(runSweep, 60_000);
+setInterval(runSweep, CONFIG.SWEEP_INTERVAL_MS);
