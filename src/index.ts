@@ -64,7 +64,7 @@ client.on("messageCreate", async (msg) => {
 });
 
 /* ---------- ready: fetch members + catch-up ---------- */
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`[+] Bot ready as ${client.user?.tag}`);
   console.log("[+] Fetching members...");
   for (const g of client.guilds.cache.values()) {
