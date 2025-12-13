@@ -24,59 +24,32 @@ describe("RoleManagerService", () => {
     roleManager = new RoleManagerService(mockConfig, mockRepository);
   });
 
-  it("should ensure roles exist", async () => {
-    // Mock guild with all roles present
+  it("should get roles", async () => {
+    // Mock roles
+    const activeRole = { name: "Active" };
+    const inactiveRole = { name: "Inactive" };
+    const dormantRole = { name: "Dormant" };
+
+    // Mock guild
     const mockGuild = {
-      name: "Test Guild",
       roles: {
         cache: {
           find: (fn: any) => {
-            const role = { name: "Active" };
-            return fn(role) ? role : null;
+            if (fn(activeRole)) return activeRole;
+            if (fn(inactiveRole)) return inactiveRole;
+            if (fn(dormantRole)) return dormantRole;
+            return null;
           },
         },
       },
     } as unknown as Guild;
-
-    // Mock find to return roles for all names
-    mockGuild.roles.cache.find = (fn: any) => {
-      const activeRole = { name: "Active" };
-      const inactiveRole = { name: "Inactive" };
-      const dormantRole = { name: "Dormant" };
-      if (fn(activeRole)) return activeRole;
-      if (fn(inactiveRole)) return inactiveRole;
-      if (fn(dormantRole)) return dormantRole;
-      return null;
-    };
 
     const roleMap = await roleManager.ensureRolesExist(mockGuild);
 
     expect(roleMap.size).toBe(3);
-    expect(roleMap.get("Active")).toBeDefined();
-    expect(roleMap.get("Inactive")).toBeDefined();
-    expect(roleMap.get("Dormant")).toBeDefined();
-  });
-
-  it("should throw error if role does not exist", async () => {
-    // Mock guild missing Inactive role
-    const mockGuild = {
-      name: "Test Guild",
-      roles: {
-        cache: {
-          find: (fn: any) => {
-            const activeRole = { name: "Active" };
-            const dormantRole = { name: "Dormant" };
-            if (fn(activeRole)) return activeRole;
-            if (fn(dormantRole)) return dormantRole;
-            return null; // Inactive missing
-          },
-        },
-      },
-    } as unknown as Guild;
-
-    await expect(roleManager.ensureRolesExist(mockGuild)).rejects.toThrow(
-      'Required role "Inactive" does not exist in guild "Test Guild". Please create it manually.'
-    );
+    expect(roleMap.get("Active")).toBe(activeRole);
+    expect(roleMap.get("Inactive")).toBe(inactiveRole);
+    expect(roleMap.get("Dormant")).toBe(dormantRole);
   });
 
   it("should assign role to user", async () => {

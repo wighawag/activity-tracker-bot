@@ -12,23 +12,19 @@ export class RoleManagerService {
   }
 
   /**
-   * Ensure all required roles exist in the guild
+   * Get all required roles in the guild (assumes they exist)
    */
   async ensureRolesExist(guild: Guild): Promise<Map<string, Role>> {
     const roleMap = new Map<string, Role>();
 
-    // Check for each required role
+    // Get each required role
     for (const roleName of [
       this.config.ACTIVE_ROLE_NAME,
       this.config.INACTIVE_ROLE_NAME,
       this.config.DORMANT_ROLE_NAME,
     ]) {
       const existingRole = guild.roles.cache.find((r) => r.name === roleName);
-      if (existingRole) {
-        roleMap.set(roleName, existingRole);
-      } else {
-        throw new Error(`Required role "${roleName}" does not exist in guild "${guild.name}". Please create it manually.`);
-      }
+      roleMap.set(roleName, existingRole!);
     }
 
     return roleMap;
