@@ -1,16 +1,13 @@
-import "reflect-metadata";
-import { SapphireClient } from "@sapphire/framework";
-import { GatewayIntentBits, TextChannel } from "discord.js";
+import { Client, GatewayIntentBits, TextChannel } from "discord.js";
 import * as db from "./db.js";
 import { CONFIG } from "./config.js";
 import { sweep, makeActivityButton, type SweepDeps } from "./sweep.js";
-import "./button-handler.js";
-import "./cmd-send-panel.js";
+import { handleButtonInteraction } from "./button-handler.js";
 
 export { CONFIG, makeActivityButton };
 export { refreshActivity };
 
-const client = new SapphireClient({
+const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -18,7 +15,6 @@ const client = new SapphireClient({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
   ],
-  loadMessageCommandListeners: true,
 });
 
 client.login(CONFIG.DISCORD_TOKEN);
@@ -137,6 +133,11 @@ async function runSweep(): Promise<void> {
   console.log("[sweep]", stats);
 }
 
+/* ---------- button interaction handler ---------- */
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+  await handleButtonInteraction(interaction);
+});
+
 /* ---------- periodic sweep ---------- */
 setInterval(runSweep, 60_000);
-client.login();

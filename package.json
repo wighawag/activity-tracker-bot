@@ -2,15 +2,11 @@
   "name": "discord-active-bot",
   "type": "module",
   "dependencies": {
-    "@sapphire/framework": "^5.2.0",
-    "@sapphire/decorators": "^6.0.0",
     "discord.js": "^14.14.1",
-    "better-sqlite3": "^9.2.2",
     "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "bun-types": "latest",
-    "@types/better-sqlite3": "^7.6.8",
     "@types/bun": "latest"
   },
   "scripts": {
