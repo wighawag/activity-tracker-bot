@@ -53,10 +53,8 @@ async function main() {
     logWithTimestamp(`🚀 Logged in as ${client.user?.tag}!`);
 
     try {
-      // Register slash commands
-      logWithTimestamp("📋 Registering slash commands...");
-      await registerCommands(config);
-      logWithTimestamp("✅ Slash commands registered successfully");
+      // Note: Slash commands are registered separately using `bun run register`
+      // This avoids unnecessary API calls on every bot restart
 
       // Start sweep process
       logWithTimestamp("🧹 Starting sweep process...");
