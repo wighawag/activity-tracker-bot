@@ -1,236 +1,198 @@
-import { Client, GatewayIntentBits, TextChannel } from "discord.js";
-import * as db from "./db.js";
-import { CONFIG } from "./config.js";
-import {
-  sweep,
-  makeActivityButton,
-  type SweepDeps,
-  getDormantUsers,
-} from "./sweep.js";
-import { handleButtonInteraction } from "./button-handler.js";
-import {
-  handleKickDormantCommand,
-  handleKickConfirmation,
-} from "./admin-commands.js";
+import { Client, GatewayIntentBits, Partials } from "discord.js";
+import { createConfig } from "./config";
+import { SQLiteActivityRepository } from "./db/repository";
+import { RoleManagerService } from "./services/roles";
+import { NotificationService } from "./services/notifications";
+import { SweepService } from "./services/sweep";
+import { KickCommand } from "./commands/kick";
+import { registerCommands } from "./commands/register";
 
-export { CONFIG, makeActivityButton };
-export { refreshActivity };
-
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages,
-  ],
-});
-
-client.login(CONFIG.DISCORD_TOKEN);
-
-function refreshActivity(userId: string, guildId: string): void {
-  db.upsertActivity(userId, guildId, Date.now());
+// Add logging utility
+function logWithTimestamp(message: string): void {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
 }
 
-/* ---------- message listener ---------- */
-client.on("messageCreate", async (msg) => {
-  if (msg.author.bot || !msg.inGuild()) return;
-  const guild = msg.guild!;
-  const member = msg.member!;
+async function main() {
+  // Load configuration
+  const config = createConfig();
 
-  // Find all three roles
-  const activeRole = guild.roles.cache.find(
-    (r) => r.name === CONFIG.ACTIVE_ROLE_NAME,
+  // Initialize database
+  const repository = new SQLiteActivityRepository(config.DB_PATH);
+  await repository.initialize();
+  logWithTimestamp("✅ Database initialized successfully");
+
+  // Create Discord client
+  const client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.MessageContent,
+    ],
+    partials: [Partials.Channel],
+  });
+
+  // Initialize services
+  const roleManager = new RoleManagerService(config, repository);
+  const notificationService = new NotificationService(config, client);
+  const sweepService = new SweepService(
+    config,
+    client,
+    repository,
+    roleManager,
+    notificationService,
   );
-  const inactiveRole = guild.roles.cache.find(
-    (r) => r.name === CONFIG.INACTIVE_ROLE_NAME,
-  );
-  const dormantRole = guild.roles.cache.find(
-    (r) => r.name === CONFIG.DORMANT_ROLE_NAME,
-  );
 
-  if (!activeRole) return;
+  const kickCommand = new KickCommand(config, client, repository, roleManager);
 
-  refreshActivity(msg.author.id, guild.id);
+  logWithTimestamp("🛠️  Services initialized");
 
-  // Always assign active role on message create, regardless of current role status
-  // First remove inactive and dormant roles if they exist
-  if (inactiveRole && member.roles.cache.has(inactiveRole.id)) {
-    await member.roles.remove(inactiveRole).catch(() => {});
-  }
-  if (dormantRole && member.roles.cache.has(dormantRole.id)) {
-    await member.roles.remove(dormantRole).catch(() => {});
-  }
+  // Register event handlers
+  client.on("ready", async () => {
+    logWithTimestamp(`🚀 Logged in as ${client.user?.tag}!`);
 
-  // Add active role
-  if (!member.roles.cache.has(activeRole.id)) {
-    await member.roles.add(activeRole).catch(() => {});
-  }
-});
-
-/* ---------- ready: fetch members + catch-up ---------- */
-client.once("clientReady", async () => {
-  console.log(`[+] Bot ready as ${client.user?.tag}`);
-  console.log("[+] Fetching members...");
-  for (const g of client.guilds.cache.values()) {
     try {
-      await g.members.fetch();
-    } catch {}
-  }
-  console.log(
-    "[+] Members fetched – assigning roles to users without role status...",
-  );
-  await assignRolesToUsersWithoutStatus();
-  console.log("[+] Role assignment complete – running catch-up sweep...");
-  await runSweep();
-  console.log("[+] Catch-up complete.");
-});
+      // Register slash commands
+      logWithTimestamp("📋 Registering slash commands...");
+      await registerCommands(config);
+      logWithTimestamp("✅ Slash commands registered successfully");
 
-/* ---------- assign roles to users without role status ---------- */
-async function assignRolesToUsersWithoutStatus(): Promise<void> {
-  for (const guild of client.guilds.cache.values()) {
+      // Start sweep process
+      logWithTimestamp("🧹 Starting sweep process...");
+      sweepService.start();
+      logWithTimestamp(
+        `✅ Sweep process started (interval: ${config.SWEEP_INTERVAL_MS}ms)`,
+      );
+
+      // Sync guild members on startup
+      logWithTimestamp("🔄 Syncing guild members...");
+      await syncGuildMembers(client, repository);
+      logWithTimestamp("✅ Guild members synced successfully");
+    } catch (error) {
+      console.error("🚨 Error during bot initialization:", error);
+      process.exit(1);
+    }
+  });
+
+  client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+
     try {
-      // Find all three roles
-      const activeRole = guild.roles.cache.find(
-        (r) => r.name === CONFIG.ACTIVE_ROLE_NAME,
-      );
-      const inactiveRole = guild.roles.cache.find(
-        (r) => r.name === CONFIG.INACTIVE_ROLE_NAME,
-      );
-      const dormantRole = guild.roles.cache.find(
-        (r) => r.name === CONFIG.DORMANT_ROLE_NAME,
-      );
+      if (message.guild) {
+        // Update user activity
+        await sweepService.handleUserActivity(
+          message.guild.id,
+          message.author.id,
+        );
 
-      if (!activeRole) continue;
-
-      // Get all members in the guild
-      const members = await guild.members.fetch();
-
-      for (const member of members.values()) {
-        if (member.user.bot) continue;
-
-        // Check if user has any of the three roles
-        const hasActive = activeRole && member.roles.cache.has(activeRole.id);
-        const hasInactive =
-          inactiveRole && member.roles.cache.has(inactiveRole?.id);
-        const hasDormant =
-          dormantRole && member.roles.cache.has(dormantRole?.id);
-
-        // If user doesn't have any of the three roles, assign active role
-        if (!hasActive && !hasInactive && !hasDormant) {
-          try {
-            await member.roles.add(activeRole);
-            // Update database with user's activity status
-            db.upsertActivity(member.id, guild.id, Date.now(), "active");
-            console.log(
-              `[+] Assigned active role to user ${member.user.tag} in guild ${guild.name}`,
-            );
-          } catch (error) {
-            console.error(
-              `[-] Failed to assign active role to user ${member.user.tag} in guild ${guild.name}:`,
-              error,
-            );
-          }
-        } else {
-          // Ensure user has a database record with the correct role
-          const dbUser = db.getUser(member.id);
-          if (dbUser) {
-            // Update role in database if it doesn't match Discord
-            if (hasActive && dbUser.user_role !== "active") {
-              db.updateUserRole(member.id, "active");
-            } else if (hasInactive && dbUser.user_role !== "inactive") {
-              db.updateUserRole(member.id, "inactive");
-            } else if (hasDormant && dbUser.user_role !== "dormant") {
-              db.updateUserRole(member.id, "dormant");
-            }
-          } else {
-            // Create database record for user
-            let role = "active";
-            if (hasInactive) role = "inactive";
-            if (hasDormant) role = "dormant";
-            db.upsertActivity(member.id, guild.id, Date.now(), role);
-          }
-        }
+        // Ensure user has a role
+        await roleManager.ensureUserHasRole(message.guild, message.author.id);
       }
     } catch (error) {
-      console.error(`[-] Error processing guild ${guild.name}:`, error);
-    }
-  }
-}
-
-/* ---------- sweep with real Discord deps ---------- */
-async function runSweep(): Promise<void> {
-  const deps: SweepDeps = {
-    client,
-    now: () => Date.now(),
-
-    async sendWarning(userId, guildId, message) {
-      const row = makeActivityButton();
-      const user = await client.users.fetch(userId).catch(() => null);
-      if (!user) return false;
-
-      // try DM
-      try {
-        await user.send({ content: message, components: [row] });
-        return true;
-      } catch {}
-
-      // fallback
-      if (!CONFIG.FALLBACK_CHANNEL_ID) return false;
-      const guild = client.guilds.cache.get(guildId);
-      if (!guild) return false;
-      const channel = guild.channels.cache.get(CONFIG.FALLBACK_CHANNEL_ID);
-      if (!channel || !(channel instanceof TextChannel)) return false;
-
-      try {
-        await channel.send({
-          content: `<@${userId}> ${message}`,
-          components: [row],
-        });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-
-    async removeRole(guildId, userId) {
-      const guild = client.guilds.cache.get(guildId);
-      if (!guild) return false;
-      const member = guild.members.cache.get(userId);
-      const role = guild.roles.cache.find(
-        (r) => r.name === CONFIG.ACTIVE_ROLE_NAME,
+      console.error(
+        `🚨 Error handling message from ${message.author.tag}:`,
+        error,
       );
-      if (!member || !role || !member.roles.cache.has(role.id)) return false;
-      try {
-        await member.roles.remove(role);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-  };
+    }
+  });
 
-  const stats = await sweep(deps);
-  console.log("[sweep]", stats);
+  client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    try {
+      await kickCommand.handle(interaction);
+    } catch (error) {
+      console.error(`🚨 Error handling interaction:`, error);
+      if (interaction.isRepliable()) {
+        await interaction.reply({
+          content: "❌ An error occurred while processing your command.",
+          ephemeral: true,
+        });
+      }
+    }
+  });
+
+  client.on("guildMemberAdd", async (member) => {
+    try {
+      logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
+      // Ensure new members get the active role
+      await roleManager.ensureUserHasRole(member.guild, member.id);
+      logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
+    } catch (error) {
+      console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
+    }
+  });
+
+  // Handle process termination
+  process.on("SIGINT", async () => {
+    logWithTimestamp("🛑 Received SIGINT, shutting down gracefully...");
+    sweepService.stop();
+    await client.destroy();
+    process.exit(0);
+  });
+
+  process.on("uncaughtException", (error) => {
+    console.error("🚨 Uncaught exception:", error);
+    // Attempt graceful shutdown
+    process.exit(1);
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    console.error("🚨 Unhandled rejection:", reason);
+  });
+
+  // Login to Discord
+  logWithTimestamp("🔑 Logging in to Discord...");
+  await client.login(config.DISCORD_TOKEN);
+  logWithTimestamp("✅ Successfully logged in to Discord");
 }
 
-/* ---------- interaction handler ---------- */
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.isButton()) {
-    if (interaction.customId === "activity-register") {
-      await handleButtonInteraction(interaction);
-    } else if (
-      interaction.customId === "confirm-kick-dormant" ||
-      interaction.customId === "cancel-kick-dormant"
-    ) {
-      await handleKickConfirmation(interaction, client);
-    }
-  } else if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "kick-dormant") {
-      await handleKickDormantCommand(interaction, client);
-    }
-  }
-});
+/**
+ * Sync all guild members to the database on startup
+ */
+async function syncGuildMembers(
+  client: Client,
+  repository: SQLiteActivityRepository,
+): Promise<void> {
+  try {
+    const guilds = await client.guilds.fetch();
+    let totalMembers = 0;
 
-/* ---------- periodic sweep ---------- */
-setInterval(runSweep, CONFIG.SWEEP_INTERVAL_MS);
+    for (const guild of guilds.values()) {
+      logWithTimestamp(
+        `🔄 Syncing members for guild: ${guild.name} (${guild.id})`,
+      );
+      const fetchedGuild = await guild.fetch();
+      const members = await fetchedGuild.members.fetch();
+      const memberIds = Array.from(members.keys());
+      totalMembers += memberIds.length;
+
+      await repository.syncGuildMembers(guild.id, memberIds);
+
+      // Ensure all members have roles
+      const roleManager = new RoleManagerService(createConfig(), repository);
+      for (const memberId of memberIds) {
+        try {
+          await roleManager.ensureUserHasRole(fetchedGuild, memberId);
+        } catch (error) {
+          console.error(
+            `🚨 Error assigning role to member ${memberId} in guild ${guild.id}:`,
+            error,
+          );
+        }
+      }
+    }
+    logWithTimestamp(
+      `✅ Successfully synced ${totalMembers} guild members across ${guilds.size} guilds`,
+    );
+  } catch (error) {
+    console.error("🚨 Error syncing guild members:", error);
+    throw error; // Re-throw to trigger bot restart
+  }
+}
+
+// Start the bot
+main().catch((error) => {
+  console.error("🚨 Fatal error starting bot:", error);
+  process.exit(1);
+});

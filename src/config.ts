@@ -1,30 +1,38 @@
-import "dotenv/config";
+import { z } from "zod";
 
-export const CONFIG = {
-  DISCORD_TOKEN: process.env.DISCORD_TOKEN!,
-  APP_ID: process.env.APP_ID!,
-  FALLBACK_CHANNEL_ID: process.env.FALLBACK_CHANNEL_ID,
+// Environment variable validation schema
+const envSchema = z.object({
+  DISCORD_TOKEN: z.string().min(1),
+  APP_ID: z.string().min(1),
+  FALLBACK_CHANNEL_ID: z.string().min(1).optional(),
+  ACTIVE_ROLE_NAME: z.string().default("Active"),
+  INACTIVE_ROLE_NAME: z.string().default("Inactive"),
+  DORMANT_ROLE_NAME: z.string().default("Dormant"),
+  INACTIVE_AFTER_MS: z.coerce.number().default(864000000), // 10 days
+  DORMANT_AFTER_MS: z.coerce.number().default(2592000000), // 30 days
+  SWEEP_INTERVAL_MS: z.coerce.number().default(60000), // 1 minute
+  DB_PATH: z.string().default("./activity.db"),
+});
 
-  ACTIVE_ROLE_NAME: process.env.ACTIVE_ROLE_NAME || "Active",
-  INACTIVE_ROLE_NAME: process.env.INACTIVE_ROLE_NAME || "Inactive",
-  DORMANT_ROLE_NAME: process.env.DORMANT_ROLE_NAME || "Dormant",
+export type Config = z.infer<typeof envSchema>;
 
-  // Timings (can be overridden via env for testing)
-  INACTIVE_AFTER_MS: parseInt(
-    process.env.INACTIVE_AFTER_MS || String(10 * 24 * 60 * 60 * 1000),
-  ), // 10 days
-  DORMANT_AFTER_MS: parseInt(
-    process.env.DORMANT_AFTER_MS || String(30 * 24 * 60 * 60 * 1000),
-  ), // 30 days
-  WARN_GRACE_MS: parseInt(
-    process.env.WARN_GRACE_MS || String(3 * 24 * 60 * 60 * 1000),
-  ), // 3 days
-  SWEEP_INTERVAL_MS: parseInt(process.env.SWEEP_INTERVAL_MS || String(60_000)),
-} as const;
+/**
+ * Creates and validates configuration from environment variables
+ * @param env Environment variables object (defaults to process.env)
+ * @returns Validated configuration object
+ * @throws Error if validation fails
+ */
+export function createConfig(
+  env: Record<string, string | undefined> = process.env,
+): Config {
+  const result = envSchema.safeParse(env);
 
-export function getDbPath(): string {
-  if (process.env.NODE_ENV === "test") {
-    return ":memory:";
+  if (!result.success) {
+    const errors = result.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("\n  - ");
+    throw new Error(`Invalid environment variables:\n  - ${errors}`);
   }
-  return process.env.DB_PATH || "./activity.db";
+
+  return result.data;
 }
