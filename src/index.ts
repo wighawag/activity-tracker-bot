@@ -53,7 +53,7 @@ async function main() {
   logWithTimestamp("🛠️  Services initialized");
 
   // Register event handlers
-  client.on("ready", async () => {
+  client.on("clientReady", async () => {
     logWithTimestamp(`🚀 Logged in as ${client.user?.tag}!`);
 
     try {
