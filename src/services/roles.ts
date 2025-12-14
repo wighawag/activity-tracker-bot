@@ -80,6 +80,7 @@ export class RoleManagerService {
         last_activity: new Date(),
         current_role: roleName,
         added_via: added_via,
+        warning_sent: roleName === "active" ? null : undefined,
       });
       return;
     }
@@ -127,6 +128,7 @@ export class RoleManagerService {
           last_activity: new Date(),
           current_role: roleName,
           added_via: added_via,
+          warning_sent: roleName === "active" ? null : undefined,
         });
         logWithTimestamp(
           `💾 Updated database for user ${userId} with role ${roleName}`,

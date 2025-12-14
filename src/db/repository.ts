@@ -45,11 +45,6 @@ export class SQLiteActivityRepository implements ActivityRepository {
   }
 
   async upsertUser(user: UserActivity): Promise<void> {
-    // Reset warning when user becomes active
-    if (user.current_role === "active") {
-      user.warning_sent = null;
-    }
-
     if (user.warning_sent === undefined) {
       // Don't update warning_sent
       const query = this.db.prepare(`
