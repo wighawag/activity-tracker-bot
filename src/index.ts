@@ -133,11 +133,14 @@ async function main() {
     const handler = async () => {
       try {
         logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
-        // Ensure new members get the active role
-        await roleManager.ensureUserHasRole(member.guild, member.id);
+        // Assign active role to new/rejoining members
+        await roleManager.assignRoleToUser(member.guild, member.id, "active");
         logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
       } catch (error) {
-        console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
+        console.error(
+          `🚨 Error handling new member ${member.user.tag}:`,
+          error,
+        );
       }
     };
 
@@ -152,7 +155,9 @@ async function main() {
     shuttingDown = true;
     await sweepService.stop();
     if (ongoingPromises.size > 0) {
-      logWithTimestamp(`⏳ Waiting for ${ongoingPromises.size} ongoing operations to complete...`);
+      logWithTimestamp(
+        `⏳ Waiting for ${ongoingPromises.size} ongoing operations to complete...`,
+      );
       await Promise.allSettled(ongoingPromises);
       logWithTimestamp("✅ Ongoing operations completed");
     }
