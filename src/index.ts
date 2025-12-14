@@ -142,6 +142,47 @@ async function main() {
                 }
               }
             }
+          } else if (interaction.customId.startsWith("leave_")) {
+            const parts = interaction.customId.split("_");
+            if (parts.length === 3) {
+              const guildId = parts[1];
+              const userId = parts[2];
+              if (guildId && userId) {
+                if (interaction.user.id === userId) {
+                  const guild = interaction.guild;
+                  if (guild) {
+                    try {
+                      await guild.members.kick(
+                        userId,
+                        "User chose to leave via button",
+                      );
+                      if (interaction.isRepliable()) {
+                        await interaction.reply({
+                          content: "You have been removed from the server.",
+                          flags: MessageFlags.Ephemeral,
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error kicking user:", error);
+                      if (interaction.isRepliable()) {
+                        await interaction.reply({
+                          content: "❌ Failed to remove you from the server.",
+                          flags: MessageFlags.Ephemeral,
+                        });
+                      }
+                    }
+                  }
+                } else {
+                  if (interaction.isRepliable()) {
+                    await interaction.reply({
+                      content:
+                        "❌ This button is not for you. Only the targeted user can use it.",
+                      flags: MessageFlags.Ephemeral,
+                    });
+                  }
+                }
+              }
+            }
           }
         }
       } catch (error) {
