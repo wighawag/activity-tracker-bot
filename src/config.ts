@@ -15,6 +15,7 @@ const envSchema = z.object({
   SYNC_TIME_WINDOW_MS: z.coerce.number().default(3600000), // 1 hour (0 = sync all)
   DB_PATH: z.string().default("./activity.db"),
   ONLY_TRACK_EXISTING_USERS: z.coerce.boolean().default(false),
+  REMOVE_DORMANT_NOTIFICATIONS: z.coerce.boolean().default(false),
 });
 
 export type Config = z.infer<typeof envSchema>;

@@ -19,11 +19,29 @@ export class NotificationService {
     userId: string,
   ): Promise<void> {
     const guild = await this.client.guilds.fetch(guildId);
-    const message = {
-      content: `📢 You have been marked as **Inactive** in **${guild.name}**.
+    const daysToDormant =
+      (this.config.DORMANT_AFTER_MS - this.config.INACTIVE_AFTER_MS) / 86400000;
+    let content: string;
+
+    if (this.config.ONLY_TRACK_EXISTING_USERS) {
+      content = `📢 You have been marked as **Inactive** in **${guild.name}**.
+
+This is a warning for old users as we are re-activating our community and want to make sure we have all interested members.
+
+If you do one activity, any activity, you are considered part of the community and can relax!
+
+To regain your **Active** status, simply send a message in any channel or click the button below!`;
+    } else {
+      content = `📢 You have been marked as **Inactive** in **${guild.name}**.
 You haven't sent any messages in the last ${this.config.INACTIVE_AFTER_MS / 86400000} days.
 
-To regain your **Active** status, simply send a message in any channel or click the button below!`,
+After ${daysToDormant} more days (${this.config.DORMANT_AFTER_MS / 86400000} days total), you will be considered **Dormant** and eligible for server removal unless you perform some activity (including clicking the button below).
+
+To regain your **Active** status, simply send a message in any channel or click the button below!`;
+    }
+
+    const message = {
+      content,
       components: [
         {
           type: 1,

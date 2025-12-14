@@ -172,10 +172,12 @@ export class SweepService {
           "dormant",
           user.added_via,
         );
-        await this.notificationService.sendDormantNotification(
-          guild.id,
-          user.user_id,
-        );
+        if (!this.config.REMOVE_DORMANT_NOTIFICATIONS) {
+          await this.notificationService.sendDormantNotification(
+            guild.id,
+            user.user_id,
+          );
+        }
       } catch (error) {
         console.error(
           `Failed to transition user ${user.user_id} to dormant:`,
