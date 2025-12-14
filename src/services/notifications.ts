@@ -53,7 +53,20 @@ To regain your **Active** status, simply send a message in any channel or click 
       content: `🚨 You have been marked as **Dormant** in **${guild.name}**.
 You haven't sent any messages in the last ${this.config.DORMANT_AFTER_MS / 86400000} days.
 
-To regain your **Active** status, simply send a message in any channel or contact a moderator.`,
+To regain your **Active** status, simply send a message in any channel, click the button below, or contact a moderator.`,
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 1,
+              label: `I'm Active in ${guild.name}!`,
+              custom_id: `activity_${guildId}_${userId}`,
+            },
+          ],
+        },
+      ],
     };
 
     await this.sendNotification(guildId, userId, message);
