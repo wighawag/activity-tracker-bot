@@ -82,7 +82,7 @@ To regain your **Active** status, simply send a message in any channel, click th
       ? `\n\n🔗 **Rejoin here:** ${this.config.INVITE_LINK}`
       : "";
     const message = {
-      content: `\n🚨 **IMPORTANT NOTICE**\n\nYou have been **kicked** from **${guild.name}**.\nYou were marked as dormant due to no activity for 30+ days.\n\nYou can rejoin the server at any time.\n\n${inviteLink}`,
+      content: `\n🚨 **IMPORTANT NOTICE**\n\nYou have been **kicked** from **${guild.name}**.\nYou were marked as dormant due to no activity for 30+ days.\n\nYou can rejoin the server at any time.\n${inviteLink}`,
     };
 
     await this.sendNotification(guildId, userId, message);
