@@ -88,9 +88,6 @@ async function main() {
             message.guild.id,
             message.author.id,
           );
-
-          // Ensure user has a role
-          await roleManager.ensureUserHasRole(message.guild, message.author.id);
         }
       } catch (error) {
         console.error(
