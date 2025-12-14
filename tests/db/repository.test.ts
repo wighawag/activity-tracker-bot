@@ -74,6 +74,7 @@ describe("SQLiteActivityRepository", () => {
     const inactiveCandidates = await repository.getUsersExceedingThreshold(
       864000000, // 10 days
       "active",
+      "guild123",
     );
 
     expect(inactiveCandidates.length).toBe(1);
@@ -95,6 +96,7 @@ describe("SQLiteActivityRepository", () => {
     const dormantCandidates =
       await repository.getUsersDormantExceedingThreshold(
         2592000000, // 30 days
+        "guild123",
       );
 
     expect(dormantCandidates.length).toBe(1);

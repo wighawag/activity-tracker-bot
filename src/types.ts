@@ -77,9 +77,11 @@ export interface ActivityRepository {
   getUsersExceedingThreshold(
     thresholdMs: number,
     role: "active" | "inactive",
+    guildId: string,
   ): Promise<UserActivity[]>;
   getUsersDormantExceedingThreshold(
     thresholdMs: number,
+    guildId: string,
   ): Promise<UserActivity[]>;
   getAllUsers: () => Promise<UserActivity[]>;
 }

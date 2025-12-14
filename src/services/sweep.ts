@@ -96,6 +96,7 @@ export class SweepService {
     const inactiveCandidates = await this.repository.getUsersExceedingThreshold(
       this.config.INACTIVE_AFTER_MS,
       "active",
+      guild.id,
     );
 
     for (const user of inactiveCandidates) {
@@ -103,7 +104,8 @@ export class SweepService {
       const name =
         discordUser.displayName ||
         discordUser.globalName ||
-        discordUser.username;
+        discordUser.username ||
+        `user ${discordUser.id}`;
       try {
         logWithTimestamp(`⚠️ ${name} is inactive, assigning new role`);
         await this.roleManager.assignRoleToUser(
@@ -127,6 +129,7 @@ export class SweepService {
     const dormantCandidates =
       await this.repository.getUsersDormantExceedingThreshold(
         this.config.DORMANT_AFTER_MS,
+        guild.id,
       );
 
     for (const user of dormantCandidates) {
@@ -134,7 +137,8 @@ export class SweepService {
       const name =
         discordUser.displayName ||
         discordUser.globalName ||
-        discordUser.username;
+        discordUser.username ||
+        `user ${discordUser.id}`;
       try {
         logWithTimestamp(`⚠️ ${name} is dormant, assigning new role`);
         await this.roleManager.assignRoleToUser(guild, user.user_id, "dormant");

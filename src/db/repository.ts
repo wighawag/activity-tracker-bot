@@ -56,15 +56,16 @@ export class SQLiteActivityRepository implements ActivityRepository {
   async getUsersExceedingThreshold(
     thresholdMs: number,
     role: "active" | "inactive",
+    guildId: string,
   ): Promise<UserActivity[]> {
     const thresholdTime = Date.now() - thresholdMs;
     const query = this.db.prepare(`
       SELECT user_id, guild_id, last_activity, current_role
       FROM user_activity
-      WHERE current_role = ? AND last_activity < ?
+      WHERE current_role = ? AND last_activity < ? AND guild_id = ?
     `);
 
-    const results = query.all(role, thresholdTime) as Array<{
+    const results = query.all(role, thresholdTime, guildId) as Array<{
       user_id: string;
       guild_id: string;
       last_activity: number;
@@ -81,15 +82,16 @@ export class SQLiteActivityRepository implements ActivityRepository {
 
   async getUsersDormantExceedingThreshold(
     thresholdMs: number,
+    guildId: string,
   ): Promise<UserActivity[]> {
     const thresholdTime = Date.now() - thresholdMs;
     const query = this.db.prepare(`
       SELECT user_id, guild_id, last_activity, current_role
       FROM user_activity
-      WHERE current_role = 'inactive' AND last_activity < ?
+      WHERE current_role = 'inactive' AND last_activity < ? AND guild_id = ?
     `);
 
-    const results = query.all(thresholdTime) as Array<{
+    const results = query.all(thresholdTime, guildId) as Array<{
       user_id: string;
       guild_id: string;
       last_activity: number;

@@ -70,18 +70,23 @@ describe("RoleManagerService", () => {
       },
     } as unknown as Guild;
 
-    // Mock member
+    // Mock member with dynamic cache
+    const roleCache = new Map([
+      ["role_Inactive", { id: "role_Inactive", name: "Inactive" }],
+      ["role_Dormant", { id: "role_Dormant", name: "Dormant" }],
+    ]);
+
     const mockMember = {
       roles: {
-        cache: {
-          has: (id: string) => id !== "role123", // Has other roles but not the target
-        },
+        cache: roleCache,
         remove: (role: any) => {
           removeCalled = true;
+          roleCache.delete(role.id);
           return Promise.resolve();
         },
         add: (role: any) => {
           addCalled = true;
+          roleCache.set(role.id, role);
           return Promise.resolve();
         },
       },
@@ -117,15 +122,16 @@ describe("RoleManagerService", () => {
       },
     } as unknown as Guild;
 
-    // Mock member
+    // Mock member with dynamic cache
+    const roleCache = new Map();
+
     const mockMember = {
       roles: {
-        cache: {
-          has: () => false,
-        },
+        cache: roleCache,
         remove: () => Promise.resolve(),
         add: (role: any) => {
           addCalled = true;
+          roleCache.set(role.id, role);
           return Promise.resolve();
         },
       },
@@ -168,15 +174,16 @@ describe("RoleManagerService", () => {
       },
     } as unknown as Guild;
 
-    // Mock member
+    // Mock member with dynamic cache
+    const roleCache = new Map();
+
     const mockMember = {
       roles: {
-        cache: {
-          has: () => false,
-        },
+        cache: roleCache,
         remove: () => Promise.resolve(),
         add: (role: any) => {
           addCalled = true;
+          roleCache.set(role.id, role);
           return Promise.resolve();
         },
       },

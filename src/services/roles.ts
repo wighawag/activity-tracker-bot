@@ -1,6 +1,7 @@
 import type { Config } from "../config";
 import type { Guild, Role, GuildMember } from "discord.js";
 import type { ActivityRepository } from "../types";
+import { logWithTimestamp } from "./logging";
 
 export class RoleManagerService {
   private config: Config;
@@ -68,6 +69,9 @@ export class RoleManagerService {
 
     // Check if member already has the correct role
     if (member.roles.cache.has(targetRole.id)) {
+      logWithTimestamp(
+        `✅ User ${userId} already has ${roleName} role in guild ${guild.id}`,
+      );
       // Already has the role, just update database
       await this.repository.upsertUser({
         user_id: userId,
@@ -78,20 +82,41 @@ export class RoleManagerService {
       return;
     }
 
+    logWithTimestamp(
+      `🔄 Assigning ${roleName} role to user ${userId} in guild ${guild.id}`,
+    );
+
     // Retry logic for role operations
     let attempts = 0;
     const maxAttempts = 2;
     while (attempts < maxAttempts) {
       try {
         // Remove all activity roles except the target
+        let removedRoles = 0;
         for (const [name, role] of roleMap) {
           if (role.id !== targetRole.id && member.roles.cache.has(role.id)) {
             await member.roles.remove(role);
+            removedRoles++;
+            logWithTimestamp(`➖ Removed ${name} role from user ${userId}`);
           }
         }
 
         // Add the target role
         await member.roles.add(targetRole);
+        logWithTimestamp(`➕ Added ${roleName} role to user ${userId}`);
+
+        // Verify the role assignment was successful
+        const refreshedMember = await guild.members.fetch({ user: userId });
+        const hasTargetRole = refreshedMember.roles.cache.has(targetRole.id);
+        const activityRolesCount = Array.from(roleMap.values()).filter((role) =>
+          refreshedMember.roles.cache.has(role.id),
+        ).length;
+
+        if (!hasTargetRole || activityRolesCount !== 1) {
+          throw new Error(
+            `Role assignment verification failed: hasTarget=${hasTargetRole}, activityRoles=${activityRolesCount}`,
+          );
+        }
 
         // Update database after successful role assignment
         await this.repository.upsertUser({
@@ -100,10 +125,21 @@ export class RoleManagerService {
           last_activity: new Date(),
           current_role: roleName,
         });
+        logWithTimestamp(
+          `💾 Updated database for user ${userId} with role ${roleName}`,
+        );
         return;
       } catch (error) {
         attempts++;
-        if (attempts >= maxAttempts) throw error;
+        logWithTimestamp(
+          `⚠️ Attempt ${attempts} failed for user ${userId}: ${error}`,
+        );
+        if (attempts >= maxAttempts) {
+          logWithTimestamp(
+            `❌ Failed to assign ${roleName} role to user ${userId} after ${maxAttempts} attempts`,
+          );
+          throw error;
+        }
         // Clear cache and retry
         this.roleCache.delete(guild.id);
         roleMap = await this.ensureRolesExist(guild);
