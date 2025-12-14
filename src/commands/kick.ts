@@ -47,10 +47,7 @@ export class KickCommand {
       }
 
       // Get all dormant users
-      const dormantUsers =
-        await this.repository.getUsersDormantExceedingThreshold(
-          this.config.DORMANT_AFTER_MS,
-        );
+      const dormantUsers = await this.repository.getDormantUsers(guild.id);
 
       if (dormantUsers.length === 0) {
         await interaction.editReply("✅ No dormant users found to kick.");
@@ -62,6 +59,19 @@ export class KickCommand {
       for (const user of dormantUsers) {
         try {
           const member = await guild.members.fetch(user.user_id);
+
+          // Skip bots
+          if (member.user.bot) {
+            console.log(`Skipping bot user ${user.user_id}`);
+            continue;
+          }
+
+          // Skip users with admin permissions
+          if (member.permissions.has("Administrator")) {
+            console.log(`Skipping admin user ${user.user_id}`);
+            continue;
+          }
+
           await member.kick("Dormant user (no activity for 30+ days)");
           kickedCount++;
         } catch (error) {

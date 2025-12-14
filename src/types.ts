@@ -83,5 +83,6 @@ export interface ActivityRepository {
     thresholdMs: number,
     guildId: string,
   ): Promise<UserActivity[]>;
+  getDormantUsers(guildId: string): Promise<UserActivity[]>;
   getAllUsers: () => Promise<UserActivity[]>;
 }

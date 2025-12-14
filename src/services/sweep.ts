@@ -100,6 +100,9 @@ export class SweepService {
     );
 
     for (const user of inactiveCandidates) {
+      // Skip the bot itself
+      if (user.user_id === this.client.user?.id) continue;
+
       const discordUser = user as unknown as User;
       const name =
         discordUser.displayName ||
@@ -133,6 +136,9 @@ export class SweepService {
       );
 
     for (const user of dormantCandidates) {
+      // Skip the bot itself
+      if (user.user_id === this.client.user?.id) continue;
+
       const discordUser = user as unknown as User;
       const name =
         discordUser.displayName ||

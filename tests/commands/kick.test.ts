@@ -20,7 +20,7 @@ describe("KickCommand", () => {
 
     // Mock repository
     mockRepository = {
-      getUsersDormantExceedingThreshold: mock(() => Promise.resolve([])),
+      getDormantUsers: mock(() => Promise.resolve([])),
     };
 
     // Mock role manager
@@ -93,7 +93,7 @@ describe("KickCommand", () => {
 
   it("should kick dormant users", async () => {
     // Mock dormant users
-    mockRepository.getUsersDormantExceedingThreshold = mock(() =>
+    mockRepository.getDormantUsers = mock(() =>
       Promise.resolve([
         {
           user_id: "user1",
@@ -113,6 +113,8 @@ describe("KickCommand", () => {
       members: {
         fetch: mock(() =>
           Promise.resolve({
+            user: { bot: false },
+            permissions: { has: mock(() => false) },
             kick: kickMock,
           }),
         ),
@@ -139,9 +141,99 @@ describe("KickCommand", () => {
     );
   });
 
+  it("should skip bot users", async () => {
+    // Mock dormant users
+    mockRepository.getDormantUsers = mock(() =>
+      Promise.resolve([
+        {
+          user_id: "bot1",
+          guild_id: "guild123",
+          last_activity: new Date(Date.now() - 2592000000 - 1000),
+          current_role: "dormant",
+        },
+      ]),
+    );
+
+    // Mock guild
+    const mockGuild = {
+      id: "guild123",
+      members: {
+        fetch: mock(() =>
+          Promise.resolve({
+            user: { bot: true },
+            permissions: { has: mock(() => false) },
+            kick: mock(() => Promise.resolve()),
+          }),
+        ),
+      },
+    } as unknown as Guild;
+
+    const editReplyMock = mock(() => Promise.resolve());
+    const mockInteraction = {
+      commandName: "kick-dormant",
+      options: {
+        getBoolean: mock(() => true),
+      },
+      guild: mockGuild,
+      deferReply: mock(() => Promise.resolve()),
+      editReply: editReplyMock,
+    } as unknown as ChatInputCommandInteraction;
+
+    await kickCommand.handle(mockInteraction);
+
+    expect(editReplyMock).toHaveBeenCalledWith(
+      "✅ Successfully kicked 0 dormant users.",
+    );
+  });
+
+  it("should skip admin users", async () => {
+    // Mock dormant users
+    mockRepository.getDormantUsers = mock(() =>
+      Promise.resolve([
+        {
+          user_id: "admin1",
+          guild_id: "guild123",
+          last_activity: new Date(Date.now() - 2592000000 - 1000),
+          current_role: "dormant",
+        },
+      ]),
+    );
+
+    // Mock guild
+    const mockGuild = {
+      id: "guild123",
+      members: {
+        fetch: mock(() =>
+          Promise.resolve({
+            user: { bot: false },
+            permissions: { has: mock(() => true) },
+            kick: mock(() => Promise.resolve()),
+          }),
+        ),
+      },
+    } as unknown as Guild;
+
+    const editReplyMock = mock(() => Promise.resolve());
+    const mockInteraction = {
+      commandName: "kick-dormant",
+      options: {
+        getBoolean: mock(() => true),
+      },
+      guild: mockGuild,
+      deferReply: mock(() => Promise.resolve()),
+      editReply: editReplyMock,
+    } as unknown as ChatInputCommandInteraction;
+
+    await kickCommand.handle(mockInteraction);
+
+    expect(editReplyMock).toHaveBeenCalledWith(
+      "✅ Successfully kicked 0 dormant users.",
+    );
+  });
+
   it("should handle kick errors gracefully", async () => {
     // Mock dormant users
-    mockRepository.getUsersDormantExceedingThreshold = mock(() =>
+    mockRepository.getDormantUsers = mock(() =>
       Promise.resolve([
         {
           user_id: "user1",
@@ -158,6 +250,8 @@ describe("KickCommand", () => {
       members: {
         fetch: mock(() => {
           return Promise.resolve({
+            user: { bot: false },
+            permissions: { has: mock(() => false) },
             kick: () => Promise.reject(new Error("Kick failed")),
           });
         }),

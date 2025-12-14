@@ -84,14 +84,14 @@ describe("SQLiteActivityRepository", () => {
   it("should get dormant users exceeding threshold", async () => {
     // Insert test users
     const now = Date.now();
-    const dormantUser = {
-      user_id: "dormant1",
+    const inactiveUser = {
+      user_id: "inactive1",
       guild_id: "guild123",
       last_activity: new Date(now - 2592000000 - 1000), // 30 days + 1 second ago
       current_role: "inactive" as const,
     };
 
-    await repository.upsertUser(dormantUser);
+    await repository.upsertUser(inactiveUser);
 
     const dormantCandidates =
       await repository.getUsersDormantExceedingThreshold(
@@ -100,6 +100,24 @@ describe("SQLiteActivityRepository", () => {
       );
 
     expect(dormantCandidates.length).toBe(1);
-    expect(dormantCandidates[0]?.user_id).toBe("dormant1");
+    expect(dormantCandidates[0]?.user_id).toBe("inactive1");
+  });
+
+  it("should get dormant users", async () => {
+    // Insert test users
+    const dormantUser = {
+      user_id: "dormant1",
+      guild_id: "guild123",
+      last_activity: new Date(),
+      current_role: "dormant" as const,
+    };
+
+    await repository.upsertUser(dormantUser);
+
+    const dormantUsers = await repository.getDormantUsers("guild123");
+
+    expect(dormantUsers.length).toBe(1);
+    expect(dormantUsers[0]?.user_id).toBe("dormant1");
+    expect(dormantUsers[0]?.current_role).toBe("dormant");
   });
 });

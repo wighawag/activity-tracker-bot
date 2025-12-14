@@ -106,6 +106,28 @@ export class SQLiteActivityRepository implements ActivityRepository {
     }));
   }
 
+  async getDormantUsers(guildId: string): Promise<UserActivity[]> {
+    const query = this.db.prepare(`
+      SELECT user_id, guild_id, last_activity, current_role
+      FROM user_activity
+      WHERE current_role = 'dormant' AND guild_id = ?
+    `);
+
+    const results = query.all(guildId) as Array<{
+      user_id: string;
+      guild_id: string;
+      last_activity: number;
+      current_role: "active" | "inactive" | "dormant";
+    }>;
+
+    return results.map((result) => ({
+      user_id: result.user_id,
+      guild_id: result.guild_id,
+      last_activity: new Date(result.last_activity),
+      current_role: result.current_role,
+    }));
+  }
+
   async getAllUsers(): Promise<UserActivity[]> {
     const query = this.db.prepare(`
       SELECT user_id, guild_id, last_activity, current_role
