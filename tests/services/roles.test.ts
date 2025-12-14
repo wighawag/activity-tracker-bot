@@ -63,15 +63,19 @@ describe("RoleManagerService", () => {
       id: "guild123",
       roles: {
         cache: {
-          find: (fn: any) => fn(mockRole),
+          find: (fn: any) => (fn(mockRole) ? mockRole : undefined),
         },
-        create: () => Promise.resolve(mockRole),
+        create: (options: any) =>
+          Promise.resolve({ id: `role_${options.name}`, name: options.name }),
       },
     } as unknown as Guild;
 
     // Mock member
     const mockMember = {
       roles: {
+        cache: {
+          has: (id: string) => id !== "role123", // Has other roles but not the target
+        },
         remove: (role: any) => {
           removeCalled = true;
           return Promise.resolve();
@@ -106,15 +110,19 @@ describe("RoleManagerService", () => {
       id: "guild123",
       roles: {
         cache: {
-          find: (fn: any) => fn(mockRole),
+          find: (fn: any) => (fn(mockRole) ? mockRole : undefined),
         },
-        create: () => Promise.resolve(mockRole),
+        create: (options: any) =>
+          Promise.resolve({ id: `role_${options.name}`, name: options.name }),
       },
     } as unknown as Guild;
 
     // Mock member
     const mockMember = {
       roles: {
+        cache: {
+          has: () => false,
+        },
         remove: () => Promise.resolve(),
         add: (role: any) => {
           addCalled = true;
@@ -163,6 +171,9 @@ describe("RoleManagerService", () => {
     // Mock member
     const mockMember = {
       roles: {
+        cache: {
+          has: () => false,
+        },
         remove: () => Promise.resolve(),
         add: (role: any) => {
           addCalled = true;

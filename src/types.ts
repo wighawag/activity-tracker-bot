@@ -82,5 +82,4 @@ export interface ActivityRepository {
     thresholdMs: number,
   ): Promise<UserActivity[]>;
   getAllUsers: () => Promise<UserActivity[]>;
-  syncGuildMembers: (guildId: string, memberIds: string[]) => Promise<void>;
 }

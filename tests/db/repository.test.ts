@@ -100,30 +100,4 @@ describe("SQLiteActivityRepository", () => {
     expect(dormantCandidates.length).toBe(1);
     expect(dormantCandidates[0]?.user_id).toBe("dormant1");
   });
-
-  it("should sync guild members", async () => {
-    const memberIds = ["user1", "user2", "user3"];
-
-    await repository.syncGuildMembers("guild123", memberIds);
-
-    const allUsers = await repository.getAllUsers();
-    expect(allUsers.length).toBe(3);
-
-    // Should assign active role to new users
-    for (const user of allUsers) {
-      expect(user.current_role).toBe("active");
-    }
-  });
-
-  it("should remove users not in guild during sync", async () => {
-    // First sync with 3 users
-    await repository.syncGuildMembers("guild123", ["user1", "user2", "user3"]);
-
-    // Sync with only 2 users
-    await repository.syncGuildMembers("guild123", ["user1", "user2"]);
-
-    const allUsers = await repository.getAllUsers();
-    expect(allUsers.length).toBe(2);
-    expect(allUsers.some((u) => u.user_id === "user3")).toBeFalse();
-  });
 });

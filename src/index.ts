@@ -6,6 +6,7 @@ import { NotificationService } from "./services/notifications";
 import { SweepService } from "./services/sweep";
 import { KickCommand } from "./commands/kick";
 import { registerCommands } from "./commands/register";
+import type { ActivityRepository } from "./types";
 
 // Add logging utility
 function logWithTimestamp(message: string): void {
@@ -187,7 +188,7 @@ async function main() {
  */
 async function syncGuildMembers(
   client: Client,
-  repository: SQLiteActivityRepository,
+  repository: ActivityRepository,
 ): Promise<void> {
   try {
     const guilds = await client.guilds.fetch();
@@ -201,8 +202,6 @@ async function syncGuildMembers(
       const members = await fetchedGuild.members.fetch();
       const memberIds = Array.from(members.keys());
       totalMembers += memberIds.length;
-
-      await repository.syncGuildMembers(guild.id, memberIds);
 
       // Ensure all members have roles
       const roleManager = new RoleManagerService(createConfig(), repository);

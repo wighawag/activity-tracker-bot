@@ -125,45 +125,6 @@ export class SQLiteActivityRepository implements ActivityRepository {
     }));
   }
 
-  async syncGuildMembers(guildId: string, memberIds: string[]): Promise<void> {
-    // Get all existing users for this guild
-    const existingUsers = this.db
-      .prepare(
-        `
-      SELECT user_id FROM user_activity WHERE guild_id = ?
-    `,
-      )
-      .all(guildId) as Array<{ user_id: string }>;
-
-    const existingUserIds = new Set(existingUsers.map((u) => u.user_id));
-    const currentUserIds = new Set(memberIds);
-
-    // Insert new users (not in DB but in guild)
-    for (const userId of memberIds) {
-      if (!existingUserIds.has(userId)) {
-        this.upsertUser({
-          user_id: userId,
-          guild_id: guildId,
-          last_activity: new Date(),
-          current_role: "active",
-        });
-      }
-    }
-
-    // Remove users that are no longer in the guild
-    for (const user of existingUsers) {
-      if (!currentUserIds.has(user.user_id)) {
-        this.db
-          .prepare(
-            `
-          DELETE FROM user_activity WHERE user_id = ? AND guild_id = ?
-        `,
-          )
-          .run(user.user_id, guildId);
-      }
-    }
-  }
-
   close(): void {
     this.db.close();
   }
