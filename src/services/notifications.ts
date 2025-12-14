@@ -19,26 +19,25 @@ export class NotificationService {
     userId: string,
   ): Promise<void> {
     const guild = await this.client.guilds.fetch(guildId);
+    const warningDays = this.config.INACTIVE_WARNING_MS / 86400000;
+    const inactiveDays = this.config.INACTIVE_AFTER_MS / 86400000;
+
     const daysToDormant =
       (this.config.DORMANT_AFTER_MS - this.config.INACTIVE_AFTER_MS) / 86400000;
     let content: string;
 
-    if (this.config.ONLY_TRACK_EXISTING_USERS) {
-      content = `📢 You have been marked as **Inactive** in **${guild.name}**.
+    content = `📢 Hi again,
 
-**Note:** The Inactive role may restrict access to some channels.
+Your role has switched to “Inactive” (it’s been ${inactiveDays} days since your last message).
+That just hides some channels; you’re still a member and everyone’s happy to see you back 🫶
 
-To regain your **Active** status, simply send a message in any channel or click the "Keep Me Active" button below. If you prefer to leave the server immediately, click the "Leave Server" button.`;
-    } else {
-      content = `📢 You have been marked as **Inactive** in **${guild.name}**.
-You haven't sent any messages in the last ${this.config.INACTIVE_AFTER_MS / 86400000} days.
+To flip back to “Active” right now:
+• type anything in any channel, or
+• hit the “Keep Me Active” button below.
 
-After ${daysToDormant} more days (${this.config.DORMANT_AFTER_MS / 86400000} days total), you will be considered **Dormant** and eligible for server removal unless you perform some activity (including clicking the "Keep Me Active" button below).
+If you’d rather leave the server today, there’s a button for that too—no hard feelings either way.
 
-**Note:** The Inactive role may restrict access to some channels.
-
-To regain your **Active** status, simply send a message in any channel or click the "Keep Me Active" button below. If you prefer to leave the server immediately, click the "Leave Server" button.`;
-    }
+Thanks for being part of ${guild.name}!`;
 
     const message = {
       content,
@@ -74,34 +73,38 @@ To regain your **Active** status, simply send a message in any channel or click 
     userId: string,
   ): Promise<void> {
     const guild = await this.client.guilds.fetch(guildId);
+    const warningDays = this.config.INACTIVE_WARNING_MS / 86400000;
+    const inactiveDays = this.config.INACTIVE_AFTER_MS / 86400000;
     const daysToInactive =
       (this.config.INACTIVE_AFTER_MS - this.config.INACTIVE_WARNING_MS) /
       86400000;
-    const daysToDormant = this.config.DORMANT_AFTER_MS / 86400000;
+    const dormantDays = this.config.DORMANT_AFTER_MS / 86400000;
 
     let content: string;
     if (this.config.ONLY_TRACK_EXISTING_USERS) {
-      content = `⚠️ **Inactivity Warning** in **${guild.name}**.
+      content = `Hey 👋
 
-This is a warning for old users as we are re-activating our community and want to make sure we have all interested members.
+We’re dusting off "${guild.name}" server and would love to keep everyone who’s still interested 💬
+You haven’t chatted in the last ${warningDays} days, so we’re giving you a quiet heads-up:
 
-You haven't sent any messages in the last ${(this.config.INACTIVE_WARNING_MS / 86400000).toFixed(1)} days.
+• If you post anything (or tap “Keep Me Active” below) in the next ${daysToInactive} days, you’ll stay just as you are.
+• After ${inactiveDays} days total silence you’ll get an “Inactive” tag that hides some channels.
+• After ${dormantDays} days total silence we’ll assume you’ve moved on and may free up your seat.
 
-In ${daysToInactive.toFixed(1)} more days (${(this.config.INACTIVE_AFTER_MS / 86400000).toFixed(1)} days total), you will be marked as **Inactive**, which will disable access to some channels.
-
-After becoming **Dormant** (${daysToDormant.toFixed(1)} days total), you will be eligible for server removal.
-
-To remain **Active**, simply send a message in any channel or click the "Keep Me Active" button below.`;
+That’s it—no pressure, just wanted to make sure you saw the memo.
+Hope to see you around!`;
     } else {
-      content = `⚠️ **Inactivity Warning** in **${guild.name}**.
+      content = `Hey 👋
 
-You haven't sent any messages in the last ${(this.config.INACTIVE_WARNING_MS / 86400000).toFixed(1)} days.
+We’re dusting off "${guild.name}" server and would love to keep everyone who’s still interested 💬
+You haven’t chatted in the last ${warningDays} days, so we’re giving you a quiet heads-up:
 
-In ${daysToInactive.toFixed(1)} more days (${(this.config.INACTIVE_AFTER_MS / 86400000).toFixed(1)} days total), you will be marked as **Inactive**, which will disable access to some channels.
+• If you post anything (or tap “Keep Me Active” below) in the next ${daysToInactive} days, you’ll stay just as you are.
+• After ${inactiveDays} days total silence you’ll get an “Inactive” tag that hides some channels.
+• After ${dormantDays} days total silence we’ll assume you’ve moved on and may free up your seat.
 
-After becoming **Dormant** (${daysToDormant.toFixed(1)} days total), you will be eligible for server removal.
-
-To remain **Active**, simply send a message in any channel or click the "Keep Me Active" button below.`;
+That’s it—no pressure, just wanted to make sure you saw the memo.
+Hope to see you around!`;
     }
 
     const message = {
