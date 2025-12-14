@@ -99,10 +99,13 @@ export class SweepService {
     );
 
     for (const user of inactiveCandidates) {
+      const discordUser = user as unknown as User;
+      const name =
+        discordUser.displayName ||
+        discordUser.globalName ||
+        discordUser.username;
       try {
-        logWithTimestamp(
-          `⚠️ ${(user as unknown as User).displayName} is inactive, assigning new role`,
-        );
+        logWithTimestamp(`⚠️ ${name} is inactive, assigning new role`);
         await this.roleManager.assignRoleToUser(
           guild,
           user.user_id,
@@ -127,10 +130,13 @@ export class SweepService {
       );
 
     for (const user of dormantCandidates) {
+      const discordUser = user as unknown as User;
+      const name =
+        discordUser.displayName ||
+        discordUser.globalName ||
+        discordUser.username;
       try {
-        logWithTimestamp(
-          `⚠️ ${(user as unknown as User).displayName} is dormant, assigning new role`,
-        );
+        logWithTimestamp(`⚠️ ${name} is dormant, assigning new role`);
         await this.roleManager.assignRoleToUser(guild, user.user_id, "dormant");
         await this.notificationService.sendDormantNotification(
           guild.id,
