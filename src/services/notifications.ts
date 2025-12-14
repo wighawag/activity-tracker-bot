@@ -1,4 +1,5 @@
 import type { Config } from "../config";
+import { PermissionFlagsBits } from "discord.js";
 import type { Client, Guild, TextChannel, ThreadChannel } from "discord.js";
 
 export class NotificationService {
@@ -102,16 +103,31 @@ To regain your **Active** status, simply send a message in any channel, click th
               );
               if (channel?.isTextBased()) {
                 const textChannel = channel as TextChannel;
+                // Only send fallback if the user can view the channel
+                if (
+                  !member
+                    .permissionsIn(textChannel)
+                    .has(PermissionFlagsBits.ViewChannel)
+                ) {
+                  console.error(
+                    `user has not permission in channel ${this.config.FALLBACK_CHANNEL_ID}`,
+                  );
+                  return;
+                }
+                console.log(`creating thread...`);
                 const thread = await textChannel.threads.create({
                   name: `Notification for ${userId}`,
                   type: 12, // PrivateThread
                   invitable: false,
                 });
+                console.log(`adding user ${userId}`);
                 await thread.members.add(userId);
+                console.log(`sending message...`);
                 await thread.send({
                   content: message.content,
                   components: message.components,
                 });
+                console.log(`...done`);
               }
             } catch (channelError) {
               console.error(
