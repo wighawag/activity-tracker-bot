@@ -30,7 +30,7 @@ To regain your **Active** status, simply send a message in any channel or click 
             {
               type: 2,
               style: 1,
-              label: `I'm Active in ${guild.name}!`,
+              label: `Keep Me Active in "${guild.name}"!`,
               custom_id: `activity_${guildId}_${userId}`,
             },
           ],
@@ -61,7 +61,7 @@ To regain your **Active** status, simply send a message in any channel, click th
             {
               type: 2,
               style: 1,
-              label: `I'm Active in ${guild.name}!`,
+              label: `Keep Me Active in "${guild.name}"!`,
               custom_id: `activity_${guildId}_${userId}`,
             },
           ],
