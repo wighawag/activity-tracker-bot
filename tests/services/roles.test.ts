@@ -97,7 +97,7 @@ describe("RoleManagerService", () => {
       fetch: () => Promise.resolve(mockMember),
     } as any;
 
-    await roleManager.assignRoleToUser(mockGuild, "user123", "active");
+    await roleManager.assignRoleToUser(mockGuild, "user123", "active", "sync");
 
     expect(removeCalled).toBeTrue();
     expect(addCalled).toBeTrue();

@@ -35,6 +35,7 @@ describe("SQLiteActivityRepository", () => {
       guild_id: "guild123",
       last_activity: new Date(),
       current_role: "active" as const,
+      added_via: "sync" as const,
     };
 
     await repository.upsertUser(user);
@@ -59,6 +60,7 @@ describe("SQLiteActivityRepository", () => {
       guild_id: "guild123",
       last_activity: new Date(now - 1000), // 1 second ago
       current_role: "active" as const,
+      added_via: "sync" as const,
     };
 
     const inactiveUser = {
@@ -66,6 +68,7 @@ describe("SQLiteActivityRepository", () => {
       guild_id: "guild123",
       last_activity: new Date(now - 864000000 - 1000), // 10 days + 1 second ago
       current_role: "active" as const,
+      added_via: "sync" as const,
     };
 
     await repository.upsertUser(activeUser);
@@ -89,6 +92,7 @@ describe("SQLiteActivityRepository", () => {
       guild_id: "guild123",
       last_activity: new Date(now - 2592000000 - 1000), // 30 days + 1 second ago
       current_role: "inactive" as const,
+      added_via: "sync" as const,
     };
 
     await repository.upsertUser(inactiveUser);
@@ -110,6 +114,7 @@ describe("SQLiteActivityRepository", () => {
       guild_id: "guild123",
       last_activity: new Date(),
       current_role: "dormant" as const,
+      added_via: "sync" as const,
     };
 
     await repository.upsertUser(dormantUser);

@@ -10,6 +10,7 @@ export interface UserActivity {
   guild_id: string;
   last_activity: Date;
   current_role: ActivityRole;
+  added_via: "sync" | "activity";
 }
 /**
  * Discord client interface for dependency injection

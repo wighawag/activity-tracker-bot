@@ -167,7 +167,12 @@ async function main() {
       try {
         logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
         // Assign active role to new/rejoining members
-        await roleManager.assignRoleToUser(member.guild, member.id, "active");
+        await roleManager.assignRoleToUser(
+          member.guild,
+          member.id,
+          "active",
+          "activity",
+        );
         logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
       } catch (error) {
         console.error(

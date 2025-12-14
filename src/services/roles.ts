@@ -48,6 +48,7 @@ export class RoleManagerService {
     guild: Guild,
     userId: string,
     roleName: "active" | "inactive" | "dormant",
+    added_via: "sync" | "activity",
   ): Promise<void> {
     const member = await guild.members.fetch({ user: userId });
     let roleMap = await this.ensureRolesExist(guild);
@@ -78,6 +79,7 @@ export class RoleManagerService {
         guild_id: guild.id,
         last_activity: new Date(),
         current_role: roleName,
+        added_via: added_via,
       });
       return;
     }
@@ -124,6 +126,7 @@ export class RoleManagerService {
           guild_id: guild.id,
           last_activity: new Date(),
           current_role: roleName,
+          added_via: added_via,
         });
         logWithTimestamp(
           `💾 Updated database for user ${userId} with role ${roleName}`,
@@ -158,10 +161,15 @@ export class RoleManagerService {
     const user = await this.repository.getUser(userId, guild.id);
     if (!user) {
       // New user - assign active role
-      await this.assignRoleToUser(guild, userId, "active");
+      await this.assignRoleToUser(guild, userId, "active", "sync");
     } else {
       // Existing user - ensure they have the correct role
-      await this.assignRoleToUser(guild, userId, user.current_role);
+      await this.assignRoleToUser(
+        guild,
+        userId,
+        user.current_role,
+        user.added_via,
+      );
     }
   }
 

@@ -93,11 +93,17 @@ export class SweepService {
    */
   private async processGuild(guild: Guild): Promise<void> {
     // Process active → inactive transitions
-    const inactiveCandidates = await this.repository.getUsersExceedingThreshold(
+    let inactiveCandidates = await this.repository.getUsersExceedingThreshold(
       this.config.INACTIVE_AFTER_MS,
       "active",
       guild.id,
     );
+
+    if (this.config.ONLY_TRACK_EXISTING_USERS) {
+      inactiveCandidates = inactiveCandidates.filter(
+        (user) => user.added_via === "sync",
+      );
+    }
 
     for (const user of inactiveCandidates) {
       try {
@@ -118,6 +124,7 @@ export class SweepService {
           guild,
           user.user_id,
           "inactive",
+          user.added_via,
         );
         await this.notificationService.sendInactiveNotification(
           guild.id,
@@ -132,11 +139,17 @@ export class SweepService {
     }
 
     // Process inactive → dormant transitions
-    const dormantCandidates =
+    let dormantCandidates =
       await this.repository.getUsersDormantExceedingThreshold(
         this.config.DORMANT_AFTER_MS,
         guild.id,
       );
+
+    if (this.config.ONLY_TRACK_EXISTING_USERS) {
+      dormantCandidates = dormantCandidates.filter(
+        (user) => user.added_via === "sync",
+      );
+    }
 
     for (const user of dormantCandidates) {
       try {
@@ -153,7 +166,12 @@ export class SweepService {
           `user ${member.user.id}`;
 
         logWithTimestamp(`⚠️ ${name} is dormant, assigning new role`);
-        await this.roleManager.assignRoleToUser(guild, user.user_id, "dormant");
+        await this.roleManager.assignRoleToUser(
+          guild,
+          user.user_id,
+          "dormant",
+          user.added_via,
+        );
         await this.notificationService.sendDormantNotification(
           guild.id,
           user.user_id,
@@ -178,16 +196,13 @@ export class SweepService {
 
       const fetchedGuild = await guild.fetch();
 
-      // Update last activity time
-      await this.repository.upsertUser({
-        user_id: userId,
-        guild_id: guildId,
-        last_activity: new Date(),
-        current_role: "active",
-      });
-
       // Ensure user has active role
-      await this.roleManager.assignRoleToUser(fetchedGuild, userId, "active");
+      await this.roleManager.assignRoleToUser(
+        fetchedGuild,
+        userId,
+        "active",
+        "activity",
+      );
     } catch (error) {
       console.error(`Failed to handle activity for user ${userId}:`, error);
     }
