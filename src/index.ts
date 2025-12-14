@@ -94,14 +94,14 @@ async function main() {
     try {
       if (message.guild) {
         // Update user activity
-        trackAsyncOperation(
+        await trackAsyncOperation(
           sweepService.handleUserActivity,
           message.guild.id,
           message.author.id,
         );
 
         // Ensure user has a role
-        trackAsyncOperation(
+        await trackAsyncOperation(
           roleManager.ensureUserHasRole,
           message.guild,
           message.author.id,
@@ -118,7 +118,7 @@ async function main() {
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand() || shuttingDown) return;
     try {
-      trackAsyncOperation(kickCommand.handle, interaction);
+      await trackAsyncOperation(kickCommand.handle, interaction);
     } catch (error) {
       console.error(`🚨 Error handling interaction:`, error);
       if (interaction.isRepliable()) {
@@ -135,7 +135,7 @@ async function main() {
     try {
       logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
       // Ensure new members get the active role
-      trackAsyncOperation(roleManager.ensureUserHasRole, member.guild, member.id);
+      await trackAsyncOperation(roleManager.ensureUserHasRole, member.guild, member.id);
       logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
     } catch (error) {
       console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
