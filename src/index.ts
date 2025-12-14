@@ -5,14 +5,8 @@ import { RoleManagerService } from "./services/roles";
 import { NotificationService } from "./services/notifications";
 import { SweepService } from "./services/sweep";
 import { KickCommand } from "./commands/kick";
-import { registerCommands } from "./commands/register";
 import type { ActivityRepository } from "./types";
-
-// Add logging utility
-function logWithTimestamp(message: string): void {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${message}`);
-}
+import { logWithTimestamp } from "./services/logging";
 
 async function main() {
   // Load configuration

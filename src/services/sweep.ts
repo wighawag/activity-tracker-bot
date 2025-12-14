@@ -3,6 +3,7 @@ import type { Client, Guild } from "discord.js";
 import type { ActivityRepository } from "../types";
 import { RoleManagerService } from "./roles";
 import { NotificationService } from "./notifications";
+import { logWithTimestamp } from "./logging";
 
 export class SweepService {
   private config: Config;
@@ -69,6 +70,7 @@ export class SweepService {
    * Run a single sweep to check for inactive users
    */
   async runSweep(): Promise<void> {
+    logWithTimestamp("🔄 running sweep...");
     try {
       const guilds = await this.client.guilds.fetch();
       for (const guild of guilds.values()) {
