@@ -149,6 +149,9 @@ async function main() {
               const userId = parts[2];
               if (guildId && userId) {
                 if (interaction.user.id === userId) {
+                  await interaction.deferReply({
+                    flags: MessageFlags.Ephemeral,
+                  });
                   try {
                     const guild =
                       await interaction.client.guilds.fetch(guildId);
@@ -156,20 +159,14 @@ async function main() {
                       userId,
                       "User chose to leave via button",
                     );
-                    if (interaction.isRepliable()) {
-                      await interaction.reply({
-                        content: "You have been removed from the server.",
-                        flags: MessageFlags.Ephemeral,
-                      });
-                    }
+                    await interaction.editReply({
+                      content: "You have been removed from the server.",
+                    });
                   } catch (error) {
                     console.error("Error kicking user:", error);
-                    if (interaction.isRepliable()) {
-                      await interaction.reply({
-                        content: "❌ Failed to remove you from the server.",
-                        flags: MessageFlags.Ephemeral,
-                      });
-                    }
+                    await interaction.editReply({
+                      content: "❌ Failed to remove you from the server.",
+                    });
                   }
                 } else {
                   if (interaction.isRepliable()) {
