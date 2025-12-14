@@ -307,6 +307,22 @@ sudo systemctl restart discord-active-bot
 - Check that the `DB_PATH` in your `.env` file points to a valid location
 - Ensure you have sufficient disk space
 
+**Activity not tracked in private channels**:
+
+- The bot tracks activity in all channels it has access to, including private channels restricted to specific roles
+- If activity is not being tracked in a private channel, ensure the bot has "View Channel" and "Read Message History" permissions in that channel
+- To update permissions for an existing private channel:
+  1. Right-click the private channel in Discord
+  2. Select "Edit Channel"
+  3. Go to the "Permissions" tab
+  4. Click "Add" under "Roles/Members"
+  5. Search for and select your bot's role (or the bot user directly)
+  6. Grant the following permissions:
+     - View Channel
+     - Read Message History
+  7. Save the changes
+- The bot will then be able to track activity in that channel
+
 ### Getting Help
 
 If you encounter issues not covered here:
