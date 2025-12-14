@@ -5,6 +5,7 @@ const envSchema = z.object({
   DISCORD_TOKEN: z.string().min(1),
   APP_ID: z.string().min(1),
   FALLBACK_CHANNEL_ID: z.string().min(1).optional(),
+  INVITE_LINK: z.string().optional(),
   ACTIVE_ROLE_NAME: z.string().default("Active"),
   INACTIVE_ROLE_NAME: z.string().default("Inactive"),
   DORMANT_ROLE_NAME: z.string().default("Dormant"),
