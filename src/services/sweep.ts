@@ -1,5 +1,5 @@
 import type { Config } from "../config";
-import type { Client, Guild } from "discord.js";
+import type { Client, Guild, User } from "discord.js";
 import type { ActivityRepository } from "../types";
 import { RoleManagerService } from "./roles";
 import { NotificationService } from "./notifications";
@@ -100,6 +100,9 @@ export class SweepService {
 
     for (const user of inactiveCandidates) {
       try {
+        logWithTimestamp(
+          `⚠️ ${(user as unknown as User).displayName} is inactive, assigning new role`,
+        );
         await this.roleManager.assignRoleToUser(
           guild,
           user.user_id,
@@ -125,6 +128,9 @@ export class SweepService {
 
     for (const user of dormantCandidates) {
       try {
+        logWithTimestamp(
+          `⚠️ ${(user as unknown as User).displayName} is dormant, assigning new role`,
+        );
         await this.roleManager.assignRoleToUser(guild, user.user_id, "dormant");
         await this.notificationService.sendDormantNotification(
           guild.id,
