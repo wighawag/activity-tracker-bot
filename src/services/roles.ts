@@ -5,6 +5,7 @@ import type { ActivityRepository } from "../types";
 export class RoleManagerService {
   private config: Config;
   private repository: ActivityRepository;
+  private roleCache = new Map<string, Map<string, Role>>();
 
   constructor(config: Config, repository: ActivityRepository) {
     this.config = config;
@@ -15,6 +16,9 @@ export class RoleManagerService {
    * Ensure all required roles exist in the guild
    */
   async ensureRolesExist(guild: Guild): Promise<Map<string, Role>> {
+    const cached = this.roleCache.get(guild.id);
+    if (cached) return cached;
+
     const roleMap = new Map<string, Role>();
 
     // Check for each required role
@@ -32,6 +36,7 @@ export class RoleManagerService {
       }
     }
 
+    this.roleCache.set(guild.id, roleMap);
     return roleMap;
   }
 
@@ -44,16 +49,18 @@ export class RoleManagerService {
     roleName: "active" | "inactive" | "dormant",
   ): Promise<void> {
     const member = await guild.members.fetch({ user: userId });
-    const roleMap = await this.ensureRolesExist(guild);
+    let roleMap = await this.ensureRolesExist(guild);
 
-    // Determine the target role
-    const targetRole = roleMap.get(
-      roleName === "active"
-        ? this.config.ACTIVE_ROLE_NAME
-        : roleName === "inactive"
-          ? this.config.INACTIVE_ROLE_NAME
-          : this.config.DORMANT_ROLE_NAME,
-    );
+    const getTargetRole = () =>
+      roleMap.get(
+        roleName === "active"
+          ? this.config.ACTIVE_ROLE_NAME
+          : roleName === "inactive"
+            ? this.config.INACTIVE_ROLE_NAME
+            : this.config.DORMANT_ROLE_NAME,
+      );
+
+    let targetRole = getTargetRole();
 
     if (!targetRole) {
       throw new Error(`Target role for ${roleName} not found`);
@@ -71,23 +78,41 @@ export class RoleManagerService {
       return;
     }
 
-    // Remove all activity roles except the target
-    for (const [name, role] of roleMap) {
-      if (role.id !== targetRole.id && member.roles.cache.has(role.id)) {
-        await member.roles.remove(role);
+    // Retry logic for role operations
+    let attempts = 0;
+    const maxAttempts = 2;
+    while (attempts < maxAttempts) {
+      try {
+        // Remove all activity roles except the target
+        for (const [name, role] of roleMap) {
+          if (role.id !== targetRole.id && member.roles.cache.has(role.id)) {
+            await member.roles.remove(role);
+          }
+        }
+
+        // Add the target role
+        await member.roles.add(targetRole);
+
+        // Update database after successful role assignment
+        await this.repository.upsertUser({
+          user_id: userId,
+          guild_id: guild.id,
+          last_activity: new Date(),
+          current_role: roleName,
+        });
+        return;
+      } catch (error) {
+        attempts++;
+        if (attempts >= maxAttempts) throw error;
+        // Clear cache and retry
+        this.roleCache.delete(guild.id);
+        roleMap = await this.ensureRolesExist(guild);
+        targetRole = getTargetRole();
+        if (!targetRole) {
+          throw new Error(`Target role for ${roleName} not found`);
+        }
       }
     }
-
-    // Add the target role
-    await member.roles.add(targetRole);
-
-    // Update database after successful role assignment
-    await this.repository.upsertUser({
-      user_id: userId,
-      guild_id: guild.id,
-      last_activity: new Date(),
-      current_role: roleName,
-    });
   }
 
   /**
