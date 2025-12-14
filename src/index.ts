@@ -149,7 +149,8 @@ async function main() {
               const userId = parts[2];
               if (guildId && userId) {
                 if (interaction.user.id === userId) {
-                  await interaction.deferReply({
+                  await interaction.reply({
+                    content: "Processing your leave request...",
                     flags: MessageFlags.Ephemeral,
                   });
                   try {
@@ -159,17 +160,7 @@ async function main() {
                       userId,
                       "User chose to leave via button",
                     );
-                    // Try to edit the reply, but if it fails (user kicked, interaction invalid), just log
-                    try {
-                      await interaction.editReply({
-                        content: "You have been removed from the server.",
-                      });
-                    } catch (editError) {
-                      console.log(
-                        "Could not edit reply to user (likely kicked):",
-                        editError,
-                      );
-                    }
+                    // User is kicked, no need to edit reply
                   } catch (error) {
                     console.error("Error kicking user:", error);
                     try {
