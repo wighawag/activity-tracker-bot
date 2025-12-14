@@ -21,17 +21,6 @@ async function main() {
   let shuttingDown = false;
   const ongoingPromises = new Set<Promise<void>>();
 
-  // Helper to track ongoing async operations
-  function trackAsyncOperation<T extends any[], R>(
-    fn: (...args: T) => Promise<R>,
-    ...args: T
-  ): Promise<R> {
-    const promise = fn(...args);
-    ongoingPromises.add(promise);
-    promise.finally(() => ongoingPromises.delete(promise));
-    return promise;
-  }
-
   // Initialize database
   const repository = new SQLiteActivityRepository(config.DB_PATH);
   await repository.initialize();
@@ -88,58 +77,73 @@ async function main() {
     }
   });
 
-  client.on("messageCreate", async (message) => {
+  client.on("messageCreate", (message) => {
     if (message.author.bot || shuttingDown) return;
 
-    try {
-      if (message.guild) {
-        // Update user activity
-        await trackAsyncOperation(
-          sweepService.handleUserActivity,
-          message.guild.id,
-          message.author.id,
-        );
+    const handler = async () => {
+      try {
+        if (message.guild) {
+          // Update user activity
+          await sweepService.handleUserActivity(
+            message.guild.id,
+            message.author.id,
+          );
 
-        // Ensure user has a role
-        await trackAsyncOperation(
-          roleManager.ensureUserHasRole,
-          message.guild,
-          message.author.id,
+          // Ensure user has a role
+          await roleManager.ensureUserHasRole(message.guild, message.author.id);
+        }
+      } catch (error) {
+        console.error(
+          `🚨 Error handling message from ${message.author.tag}:`,
+          error,
         );
       }
-    } catch (error) {
-      console.error(
-        `🚨 Error handling message from ${message.author.tag}:`,
-        error,
-      );
-    }
+    };
+
+    const promise = handler();
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
   });
 
-  client.on("interactionCreate", async (interaction) => {
+  client.on("interactionCreate", (interaction) => {
     if (!interaction.isChatInputCommand() || shuttingDown) return;
-    try {
-      await trackAsyncOperation(kickCommand.handle, interaction);
-    } catch (error) {
-      console.error(`🚨 Error handling interaction:`, error);
-      if (interaction.isRepliable()) {
-        await interaction.reply({
-          content: "❌ An error occurred while processing your command.",
-          ephemeral: true,
-        });
+
+    const handler = async () => {
+      try {
+        await kickCommand.handle(interaction);
+      } catch (error) {
+        console.error(`🚨 Error handling interaction:`, error);
+        if (interaction.isRepliable()) {
+          await interaction.reply({
+            content: "❌ An error occurred while processing your command.",
+            ephemeral: true,
+          });
+        }
       }
-    }
+    };
+
+    const promise = handler();
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
   });
 
-  client.on("guildMemberAdd", async (member) => {
+  client.on("guildMemberAdd", (member) => {
     if (shuttingDown) return;
-    try {
-      logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
-      // Ensure new members get the active role
-      await trackAsyncOperation(roleManager.ensureUserHasRole, member.guild, member.id);
-      logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
-    } catch (error) {
-      console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
-    }
+
+    const handler = async () => {
+      try {
+        logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
+        // Ensure new members get the active role
+        await roleManager.ensureUserHasRole(member.guild, member.id);
+        logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
+      } catch (error) {
+        console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
+      }
+    };
+
+    const promise = handler();
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
   });
 
   // Handle process termination
