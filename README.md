@@ -207,7 +207,31 @@ For production, we recommend running the bot as a systemd service:
 #### Option A: Run directly with Bun
 
 ```bash
+bun run start [sync_time_window_ms]
+```
+
+**Parameters:**
+
+- `sync_time_window_ms` (optional): Time window in milliseconds for member sync on startup
+  - `0`: Sync all members
+  - `3600000`: Sync members who joined in the last hour (default)
+  - `86400000`: Sync members who joined in the last 24 hours
+  - If not specified, defaults to 1 hour (3600000ms)
+
+**Examples:**
+
+```bash
+# Sync all members (same as before)
+bun run start 0
+
+# Sync members from last hour (default)
 bun run start
+
+# Sync members from last 24 hours
+bun run start 86400000
+
+# Sync members from last 6 hours
+bun run start 21600000
 ```
 
 #### Option B: Systemd service (recommended)
@@ -223,7 +247,7 @@ After=network.target
 User=your_username
 WorkingDirectory=/path/to/discord-active-bot
 EnvironmentFile=/path/to/discord-active-bot/.env
-ExecStart=/usr/local/bin/bun run start
+ExecStart=/usr/local/bin/bun run start 3600000
 Restart=always
 RestartSec=10
 

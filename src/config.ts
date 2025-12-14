@@ -11,6 +11,7 @@ const envSchema = z.object({
   INACTIVE_AFTER_MS: z.coerce.number().default(864000000), // 10 days
   DORMANT_AFTER_MS: z.coerce.number().default(2592000000), // 30 days
   SWEEP_INTERVAL_MS: z.coerce.number().default(60000), // 1 minute
+  SYNC_TIME_WINDOW_MS: z.coerce.number().default(3600000), // 1 hour (0 = sync all)
   DB_PATH: z.string().default("./activity.db"),
 });
 

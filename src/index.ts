@@ -9,6 +9,11 @@ import type { ActivityRepository } from "./types";
 import { logWithTimestamp } from "./services/logging";
 
 async function main() {
+  // Parse CLI arguments
+  const args = process.argv.slice(2);
+  const syncTimeWindowMs =
+    args.length > 0 && args[0] ? parseInt(args[0]) : 3600000; // Default to 1 hour
+
   // Load configuration
   const config = createConfig();
 
@@ -64,7 +69,7 @@ async function main() {
 
       // Sync guild members on startup
       logWithTimestamp("🔄 Syncing guild members...");
-      await syncGuildMembers(client, repository);
+      await syncGuildMembers(client, repository, syncTimeWindowMs);
       logWithTimestamp("✅ Guild members synced successfully");
     } catch (error) {
       console.error("🚨 Error during bot initialization:", error);
@@ -178,16 +183,17 @@ async function main() {
 }
 
 /**
- * Sync guild members who joined in the last hour to the database on startup
+ * Sync guild members to the database on startup
+ * @param syncTimeWindowMs Time window in milliseconds (0 = sync all members)
  */
 async function syncGuildMembers(
   client: Client,
   repository: ActivityRepository,
+  syncTimeWindowMs: number,
 ): Promise<void> {
   try {
     const guilds = await client.guilds.fetch();
     let totalMembers = 0;
-    const oneHourAgo = Date.now() - 60 * 60 * 1000; // 1 hour in milliseconds
 
     for (const guild of guilds.values()) {
       logWithTimestamp(
@@ -196,20 +202,29 @@ async function syncGuildMembers(
       const fetchedGuild = await guild.fetch();
       const members = await fetchedGuild.members.fetch();
 
-      // Filter to only members who joined in the last hour
-      const recentMembers = members.filter(
-        (member) =>
-          member.joinedTimestamp && member.joinedTimestamp > oneHourAgo,
-      );
+      let membersToProcess: Map<string, any>;
 
-      const memberIds = Array.from(recentMembers.keys());
+      if (syncTimeWindowMs === 0) {
+        // Sync all members
+        membersToProcess = members;
+        logWithTimestamp(`📊 Syncing all ${members.size} members`);
+      } else {
+        // Filter to only members who joined within the time window
+        const cutoffTime = Date.now() - syncTimeWindowMs;
+        membersToProcess = members.filter(
+          (member) =>
+            member.joinedTimestamp && member.joinedTimestamp > cutoffTime,
+        );
+        const hours = Math.round(syncTimeWindowMs / (60 * 60 * 1000));
+        logWithTimestamp(
+          `📊 Found ${membersToProcess.size} members who joined in the last ${hours} hour${hours !== 1 ? "s" : ""}`,
+        );
+      }
+
+      const memberIds = Array.from(membersToProcess.keys());
       totalMembers += memberIds.length;
 
-      logWithTimestamp(
-        `📊 Found ${memberIds.length} members who joined in the last hour`,
-      );
-
-      // Ensure recent members have roles
+      // Ensure members have roles
       const roleManager = new RoleManagerService(createConfig(), repository);
       for (const memberId of memberIds) {
         try {
@@ -222,8 +237,9 @@ async function syncGuildMembers(
         }
       }
     }
+    const syncType = syncTimeWindowMs === 0 ? "all" : "recent";
     logWithTimestamp(
-      `✅ Successfully synced ${totalMembers} recent guild members across ${guilds.size} guilds`,
+      `✅ Successfully synced ${totalMembers} ${syncType} guild members across ${guilds.size} guilds`,
     );
   } catch (error) {
     console.error("🚨 Error syncing guild members:", error);
