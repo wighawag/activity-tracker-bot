@@ -63,11 +63,11 @@ describe("SweepService", () => {
     );
   });
 
-  it("should start and stop sweep process", () => {
+  it("should start and stop sweep process", async () => {
     sweepService.start();
     expect(sweepService["sweepInterval"]).toBeDefined();
 
-    sweepService.stop();
+    await sweepService.stop();
     expect(sweepService["sweepInterval"]).toBeNull();
   });
 

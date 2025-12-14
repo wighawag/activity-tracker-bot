@@ -11,6 +11,7 @@ export class SweepService {
   private roleManager: RoleManagerService;
   private notificationService: NotificationService;
   private sweepInterval: Timer | null = null;
+  private currentSweep: Promise<void> | null = null;
 
   constructor(
     config: Config,
@@ -35,9 +36,11 @@ export class SweepService {
     }
 
     // Run immediately and then on interval
-    this.runSweep().catch(console.error);
+    this.currentSweep = this.runSweep().catch(console.error);
     this.sweepInterval = setInterval(
-      () => this.runSweep().catch(console.error),
+      () => {
+        this.currentSweep = this.runSweep().catch(console.error);
+      },
       this.config.SWEEP_INTERVAL_MS,
     );
   }
@@ -45,10 +48,14 @@ export class SweepService {
   /**
    * Stop the periodic sweep process
    */
-  stop(): void {
+  async stop(): Promise<void> {
     if (this.sweepInterval) {
       clearInterval(this.sweepInterval);
       this.sweepInterval = null;
+    }
+    if (this.currentSweep) {
+      await this.currentSweep;
+      this.currentSweep = null;
     }
   }
 

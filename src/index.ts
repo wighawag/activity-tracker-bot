@@ -122,12 +122,16 @@ async function main() {
   });
 
   // Handle process termination
-  process.on("SIGINT", async () => {
-    logWithTimestamp("🛑 Received SIGINT, shutting down gracefully...");
-    sweepService.stop();
+  const shutdown = async (signal: string) => {
+    logWithTimestamp(`🛑 Received ${signal}, shutting down gracefully...`);
+    await sweepService.stop();
     await client.destroy();
+    logWithTimestamp("✅ Shutdown complete");
     process.exit(0);
-  });
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 
   process.on("uncaughtException", (error) => {
     console.error("🚨 Uncaught exception:", error);
