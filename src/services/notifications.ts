@@ -21,7 +21,7 @@ export class NotificationService {
     const guild = await this.client.guilds.fetch(guildId);
     const warningDays = this.config.INACTIVE_WARNING_MS / 86400000;
     const inactiveDays = this.config.INACTIVE_AFTER_MS / 86400000;
-
+    const dormantDays = this.config.DORMANT_AFTER_MS / 86400000;
     const daysToDormant =
       (this.config.DORMANT_AFTER_MS - this.config.INACTIVE_AFTER_MS) / 86400000;
     let content: string;
@@ -31,12 +31,11 @@ export class NotificationService {
 Your role has switched to “Inactive” (it’s been ${inactiveDays} days since your last message).
 That just hides some channels; you’re still a member and everyone’s happy to see you back 🫶
 
-To flip back to “Active” right now:
-• type anything in any channel, or
-• hit the “Keep Me Active” button below.
+Quick timeline so you know what’s next:
+• Stay silent for ${daysToDormant} more days (${dormantDays} total) and you’ll become Dormant —eligible for a gentle kick so we can keep the server tidy.
+• One message or a click on “Keep Me Active” below instantly returns you to Active status.
 
-If you’d rather leave the server today, there’s a button for that too—no hard feelings either way.
-
+No pressure, just keeping you in the loop.
 Thanks for being part of ${guild.name}!`;
 
     const message = {
