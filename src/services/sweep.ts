@@ -100,16 +100,19 @@ export class SweepService {
     );
 
     for (const user of inactiveCandidates) {
-      // Skip the bot itself
-      if (user.user_id === this.client.user?.id) continue;
-
-      const discordUser = user as unknown as User;
-      const name =
-        discordUser.displayName ||
-        discordUser.globalName ||
-        discordUser.username ||
-        `user ${discordUser.id}`;
       try {
+        // Fetch member to check if they're a bot
+        const member = await guild.members.fetch(user.user_id);
+
+        // Skip bots
+        if (member.user.bot) continue;
+
+        const name =
+          member.displayName ||
+          member.user.globalName ||
+          member.user.username ||
+          `user ${member.user.id}`;
+
         logWithTimestamp(`⚠️ ${name} is inactive, assigning new role`);
         await this.roleManager.assignRoleToUser(
           guild,
@@ -136,16 +139,19 @@ export class SweepService {
       );
 
     for (const user of dormantCandidates) {
-      // Skip the bot itself
-      if (user.user_id === this.client.user?.id) continue;
-
-      const discordUser = user as unknown as User;
-      const name =
-        discordUser.displayName ||
-        discordUser.globalName ||
-        discordUser.username ||
-        `user ${discordUser.id}`;
       try {
+        // Fetch member to check if they're a bot
+        const member = await guild.members.fetch(user.user_id);
+
+        // Skip bots
+        if (member.user.bot) continue;
+
+        const name =
+          member.displayName ||
+          member.user.globalName ||
+          member.user.username ||
+          `user ${member.user.id}`;
+
         logWithTimestamp(`⚠️ ${name} is dormant, assigning new role`);
         await this.roleManager.assignRoleToUser(guild, user.user_id, "dormant");
         await this.notificationService.sendDormantNotification(

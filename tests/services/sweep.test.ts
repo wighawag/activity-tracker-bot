@@ -23,6 +23,14 @@ describe("SweepService", () => {
     mockGuild = {
       id: "guild123",
       fetch: mock(() => Promise.resolve(mockGuild)),
+      members: {
+        fetch: mock(() =>
+          Promise.resolve({
+            user: { bot: false },
+            displayName: "Test User",
+          }),
+        ),
+      },
     };
 
     // Mock client
