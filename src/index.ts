@@ -209,6 +209,16 @@ async function syncGuildMembers(
       const fetchedGuild = await guild.fetch();
       const members = await fetchedGuild.members.fetch();
 
+      logWithTimestamp(
+        `Fetched ${members.size} members for guild ${guild.name} (${guild.id})`,
+      );
+
+      if (members.size === 0) {
+        logWithTimestamp(
+          `⚠️  No members fetched for guild ${guild.name}. Ensure 'Server Members Intent' is enabled in the Discord Developer Portal under Bot settings > Privileged Gateway Intents.`,
+        );
+      }
+
       let membersToProcess: Map<string, any>;
 
       if (syncTimeWindowMs === 0) {
