@@ -73,6 +73,12 @@ export class SweepService {
     logWithTimestamp("🔄 running sweep...");
     try {
       const guilds = await this.client.guilds.fetch();
+
+      if (guilds.size === 0) {
+        logWithTimestamp("⚠️  No guilds to sweep. Bot is not in any servers.");
+        return;
+      }
+
       for (const guild of guilds.values()) {
         const fetchedGuild = await guild.fetch();
         await this.processGuild(fetchedGuild);

@@ -193,6 +193,13 @@ async function syncGuildMembers(
 ): Promise<void> {
   try {
     const guilds = await client.guilds.fetch();
+
+    if (guilds.size === 0) {
+      logWithTimestamp(
+        "⚠️  Bot is not in any guilds. Please invite the bot to a Discord server to start tracking activity.",
+      );
+    }
+
     let totalMembers = 0;
 
     for (const guild of guilds.values()) {
