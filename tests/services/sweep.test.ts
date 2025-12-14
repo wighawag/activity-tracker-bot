@@ -15,8 +15,10 @@ describe("SweepService", () => {
     // Mock config
     mockConfig = {
       INACTIVE_AFTER_MS: 864000000, // 10 days
+      INACTIVE_WARNING_MS: 86400000, // 1 day
       DORMANT_AFTER_MS: 2592000000, // 30 days
       SWEEP_INTERVAL_MS: 60000, // 1 minute
+      ONLY_TRACK_EXISTING_USERS: false,
     };
 
     // Mock guild
@@ -47,6 +49,7 @@ describe("SweepService", () => {
     // Mock repository
     mockRepository = {
       getUsersExceedingThreshold: mock(() => Promise.resolve([])),
+      getUsersNeedingWarning: mock(() => Promise.resolve([])),
       getUsersDormantExceedingThreshold: mock(() => Promise.resolve([])),
       upsertUser: mock(() => Promise.resolve()),
       getUser: () => Promise.resolve(null),
@@ -59,6 +62,7 @@ describe("SweepService", () => {
 
     // Mock notification service
     mockNotificationService = {
+      sendWarningNotification: mock(() => Promise.resolve()),
       sendInactiveNotification: mock(() => Promise.resolve()),
       sendDormantNotification: mock(() => Promise.resolve()),
     };
@@ -81,6 +85,19 @@ describe("SweepService", () => {
   });
 
   it("should process guild for role transitions", async () => {
+    // Mock warning users
+    mockRepository.getUsersNeedingWarning = mock(() =>
+      Promise.resolve([
+        {
+          user_id: "user0",
+          guild_id: "guild123",
+          last_activity: new Date(Date.now() - 86400000 - 1000),
+          current_role: "active",
+          added_via: "sync",
+        },
+      ]),
+    );
+
     // Mock inactive users
     mockRepository.getUsersExceedingThreshold = mock(() =>
       Promise.resolve([
@@ -110,6 +127,9 @@ describe("SweepService", () => {
     await sweepService["processGuild"](mockGuild);
 
     expect(mockRoleManager.assignRoleToUser).toHaveBeenCalledTimes(2);
+    expect(
+      mockNotificationService.sendWarningNotification,
+    ).toHaveBeenCalledWith(mockGuild.id, "user0");
     expect(
       mockNotificationService.sendInactiveNotification,
     ).toHaveBeenCalledWith(mockGuild.id, "user1");

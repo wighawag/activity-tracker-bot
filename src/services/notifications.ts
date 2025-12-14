@@ -26,10 +26,6 @@ export class NotificationService {
     if (this.config.ONLY_TRACK_EXISTING_USERS) {
       content = `📢 You have been marked as **Inactive** in **${guild.name}**.
 
-This is a warning for old users as we are re-activating our community and want to make sure we have all interested members.
-
-If you do one activity, any activity, you are considered part of the community and can relax!
-
 **Note:** The Inactive role may restrict access to some channels.
 
 To regain your **Active** status, simply send a message in any channel or click the "Keep Me Active" button below. If you prefer to leave the server immediately, click the "Leave Server" button.`;
@@ -61,6 +57,64 @@ To regain your **Active** status, simply send a message in any channel or click 
               style: 4,
               label: `Leave Server`,
               custom_id: `leave_${guildId}_${userId}`,
+            },
+          ],
+        },
+      ],
+    };
+
+    await this.sendNotification(guildId, userId, message);
+  }
+
+  /**
+   * Send warning notification before becoming inactive
+   */
+  async sendWarningNotification(
+    guildId: string,
+    userId: string,
+  ): Promise<void> {
+    const guild = await this.client.guilds.fetch(guildId);
+    const daysToInactive =
+      (this.config.INACTIVE_AFTER_MS - this.config.INACTIVE_WARNING_MS) /
+      86400000;
+    const daysToDormant = this.config.DORMANT_AFTER_MS / 86400000;
+
+    let content: string;
+    if (this.config.ONLY_TRACK_EXISTING_USERS) {
+      content = `⚠️ **Inactivity Warning** in **${guild.name}**.
+
+This is a warning for old users as we are re-activating our community and want to make sure we have all interested members.
+
+You haven't sent any messages in the last ${(this.config.INACTIVE_WARNING_MS / 86400000).toFixed(1)} days.
+
+In ${daysToInactive.toFixed(1)} more days (${(this.config.INACTIVE_AFTER_MS / 86400000).toFixed(1)} days total), you will be marked as **Inactive**, which will disable access to some channels.
+
+After becoming **Dormant** (${daysToDormant.toFixed(1)} days total), you will be eligible for server removal.
+
+To remain **Active**, simply send a message in any channel or click the "Keep Me Active" button below.`;
+    } else {
+      content = `⚠️ **Inactivity Warning** in **${guild.name}**.
+
+You haven't sent any messages in the last ${(this.config.INACTIVE_WARNING_MS / 86400000).toFixed(1)} days.
+
+In ${daysToInactive.toFixed(1)} more days (${(this.config.INACTIVE_AFTER_MS / 86400000).toFixed(1)} days total), you will be marked as **Inactive**, which will disable access to some channels.
+
+After becoming **Dormant** (${daysToDormant.toFixed(1)} days total), you will be eligible for server removal.
+
+To remain **Active**, simply send a message in any channel or click the "Keep Me Active" button below.`;
+    }
+
+    const message = {
+      content,
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 1,
+              label: `Keep Me Active in "${guild.name}"!`,
+              custom_id: `activity_${guildId}_${userId}`,
             },
           ],
         },

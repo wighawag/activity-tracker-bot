@@ -10,6 +10,7 @@ const envSchema = z.object({
   INACTIVE_ROLE_NAME: z.string().default("Inactive"),
   DORMANT_ROLE_NAME: z.string().default("Dormant"),
   INACTIVE_AFTER_MS: z.coerce.number().default(864000000), // 10 days
+  INACTIVE_WARNING_MS: z.coerce.number().default(86400000), // 1 day
   DORMANT_AFTER_MS: z.coerce.number().default(2592000000), // 30 days
   SWEEP_INTERVAL_MS: z.coerce.number().default(60000), // 1 minute
   SYNC_TIME_WINDOW_MS: z.coerce.number().default(3600000), // 1 hour (0 = sync all)

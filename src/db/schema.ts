@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS user_activity (
   last_activity INTEGER NOT NULL, -- Unix timestamp in milliseconds
   current_role TEXT NOT NULL CHECK(current_role IN ('active', 'inactive', 'dormant')),
   added_via TEXT NOT NULL CHECK(added_via IN ('sync', 'activity')),
+  warning_sent INTEGER DEFAULT 0, -- Unix timestamp when warning was sent, 0 if not sent
   PRIMARY KEY (user_id, guild_id)
 );
 

@@ -92,6 +92,49 @@ export class SweepService {
    * Process a single guild for role transitions
    */
   private async processGuild(guild: Guild): Promise<void> {
+    // Send warnings to users approaching inactive status
+    let warningCandidates = await this.repository.getUsersNeedingWarning(
+      this.config.INACTIVE_WARNING_MS,
+      this.config.INACTIVE_AFTER_MS,
+      guild.id,
+    );
+
+    if (this.config.ONLY_TRACK_EXISTING_USERS) {
+      warningCandidates = warningCandidates.filter(
+        (user) => user.added_via === "sync",
+      );
+    }
+
+    for (const user of warningCandidates) {
+      try {
+        // Fetch member to check if they're a bot
+        const member = await guild.members.fetch(user.user_id);
+
+        // Skip bots
+        if (member.user.bot) continue;
+
+        const name =
+          member.displayName ||
+          member.user.globalName ||
+          member.user.username ||
+          `user ${member.user.id}`;
+
+        logWithTimestamp(
+          `⚠️ ${name} is approaching inactivity, sending warning`,
+        );
+        await this.notificationService.sendWarningNotification(
+          guild.id,
+          user.user_id,
+        );
+
+        // Mark warning as sent
+        user.warning_sent = new Date();
+        await this.repository.upsertUser(user);
+      } catch (error) {
+        console.error(`Failed to send warning to user ${user.user_id}:`, error);
+      }
+    }
+
     // Process active → inactive transitions
     let inactiveCandidates = await this.repository.getUsersExceedingThreshold(
       this.config.INACTIVE_AFTER_MS,

@@ -11,8 +11,8 @@ describe("SQLiteActivityRepository", () => {
 
   beforeEach(() => {
     db = new Database(testDbPath);
-    db.exec(createTables);
-    repository = new SQLiteActivityRepository(testDbPath);
+    db.run(createTables);
+    repository = new SQLiteActivityRepository(db);
   });
 
   afterEach(() => {
@@ -36,6 +36,7 @@ describe("SQLiteActivityRepository", () => {
       last_activity: new Date(),
       current_role: "active" as const,
       added_via: "sync" as const,
+      warning_sent: new Date(),
     };
 
     await repository.upsertUser(user);
@@ -45,6 +46,7 @@ describe("SQLiteActivityRepository", () => {
     expect(retrievedUser?.user_id).toBe("user123");
     expect(retrievedUser?.guild_id).toBe("guild123");
     expect(retrievedUser?.current_role).toBe("active");
+    expect(retrievedUser?.warning_sent).toBeUndefined();
   });
 
   it("should return null for non-existent user", async () => {
@@ -82,6 +84,47 @@ describe("SQLiteActivityRepository", () => {
 
     expect(inactiveCandidates.length).toBe(1);
     expect(inactiveCandidates[0]!.user_id).toBe("inactive1");
+  });
+
+  it("should get users needing warning", async () => {
+    // Insert test users
+    const now = Date.now();
+    const warningUser = {
+      user_id: "warning1",
+      guild_id: "guild123",
+      last_activity: new Date(now - 86400000 - 1000), // 1 day + 1 second ago (needs warning)
+      current_role: "active" as const,
+      added_via: "sync" as const,
+    };
+
+    const activeUser = {
+      user_id: "active1",
+      guild_id: "guild123",
+      last_activity: new Date(now - 1000), // 1 second ago (still active)
+      current_role: "active" as const,
+      added_via: "sync" as const,
+    };
+
+    const inactiveUser = {
+      user_id: "inactive1",
+      guild_id: "guild123",
+      last_activity: new Date(now - 864000000 - 1000), // 10 days + 1 second ago (already inactive)
+      current_role: "active" as const,
+      added_via: "sync" as const,
+    };
+
+    await repository.upsertUser(warningUser);
+    await repository.upsertUser(activeUser);
+    await repository.upsertUser(inactiveUser);
+
+    const warningCandidates = await repository.getUsersNeedingWarning(
+      86400000, // 1 day warning threshold
+      864000000, // 10 days inactive threshold
+      "guild123",
+    );
+
+    expect(warningCandidates.length).toBe(1);
+    expect(warningCandidates[0]?.user_id).toBe("warning1");
   });
 
   it("should get dormant users exceeding threshold", async () => {

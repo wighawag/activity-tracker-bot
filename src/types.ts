@@ -11,6 +11,7 @@ export interface UserActivity {
   last_activity: Date;
   current_role: ActivityRole;
   added_via: "sync" | "activity";
+  warning_sent?: Date | null; // When warning was sent, undefined = don't update, null = reset to not sent, Date = set to date
 }
 /**
  * Discord client interface for dependency injection
@@ -78,6 +79,11 @@ export interface ActivityRepository {
   getUsersExceedingThreshold(
     thresholdMs: number,
     role: "active" | "inactive",
+    guildId: string,
+  ): Promise<UserActivity[]>;
+  getUsersNeedingWarning(
+    warningThresholdMs: number,
+    inactiveThresholdMs: number,
     guildId: string,
   ): Promise<UserActivity[]>;
   getUsersDormantExceedingThreshold(
