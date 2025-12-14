@@ -103,16 +103,36 @@ async function main() {
   });
 
   client.on("interactionCreate", (interaction) => {
-    if (!interaction.isChatInputCommand() || shuttingDown) return;
+    if (shuttingDown) return;
 
     const handler = async () => {
       try {
-        await kickCommand.handle(interaction);
+        if (interaction.isChatInputCommand()) {
+          await kickCommand.handle(interaction);
+        } else if (interaction.isButton()) {
+          if (interaction.customId.startsWith("activity_")) {
+            const parts = interaction.customId.split("_");
+            if (parts.length === 3) {
+              const guildId = parts[1];
+              const userId = parts[2];
+              if (guildId && userId) {
+                await sweepService.handleUserActivity(guildId, userId);
+                if (interaction.isRepliable()) {
+                  await interaction.reply({
+                    content:
+                      "✅ Your activity has been updated! You should now have the Active role back.",
+                    ephemeral: true,
+                  });
+                }
+              }
+            }
+          }
+        }
       } catch (error) {
         console.error(`🚨 Error handling interaction:`, error);
         if (interaction.isRepliable()) {
           await interaction.reply({
-            content: "❌ An error occurred while processing your command.",
+            content: "❌ An error occurred while processing your interaction.",
             ephemeral: true,
           });
         }

@@ -30,7 +30,7 @@ To regain your **Active** status, simply send a message in any channel or click 
               type: 2,
               style: 1,
               label: "I'm Active!",
-              custom_id: `activity_${userId}`,
+              custom_id: `activity_${guildId}_${userId}`,
             },
           ],
         },
