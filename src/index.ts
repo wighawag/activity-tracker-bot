@@ -17,6 +17,10 @@ async function main() {
   // Load configuration
   const config = createConfig();
 
+  // Graceful shutdown tracking
+  let shuttingDown = false;
+  const ongoingPromises = new Set<Promise<void>>();
+
   // Initialize database
   const repository = new SQLiteActivityRepository(config.DB_PATH);
   await repository.initialize();
@@ -74,18 +78,22 @@ async function main() {
   });
 
   client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot || shuttingDown) return;
 
     try {
       if (message.guild) {
         // Update user activity
-        await sweepService.handleUserActivity(
+        const activityPromise = sweepService.handleUserActivity(
           message.guild.id,
           message.author.id,
         );
+        ongoingPromises.add(activityPromise);
+        activityPromise.finally(() => ongoingPromises.delete(activityPromise));
 
         // Ensure user has a role
-        await roleManager.ensureUserHasRole(message.guild, message.author.id);
+        const rolePromise = roleManager.ensureUserHasRole(message.guild, message.author.id);
+        ongoingPromises.add(rolePromise);
+        rolePromise.finally(() => ongoingPromises.delete(rolePromise));
       }
     } catch (error) {
       console.error(
@@ -96,9 +104,11 @@ async function main() {
   });
 
   client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() || shuttingDown) return;
     try {
-      await kickCommand.handle(interaction);
+      const commandPromise = kickCommand.handle(interaction);
+      ongoingPromises.add(commandPromise);
+      commandPromise.finally(() => ongoingPromises.delete(commandPromise));
     } catch (error) {
       console.error(`🚨 Error handling interaction:`, error);
       if (interaction.isRepliable()) {
@@ -111,10 +121,13 @@ async function main() {
   });
 
   client.on("guildMemberAdd", async (member) => {
+    if (shuttingDown) return;
     try {
       logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
       // Ensure new members get the active role
-      await roleManager.ensureUserHasRole(member.guild, member.id);
+      const rolePromise = roleManager.ensureUserHasRole(member.guild, member.id);
+      ongoingPromises.add(rolePromise);
+      rolePromise.finally(() => ongoingPromises.delete(rolePromise));
       logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
     } catch (error) {
       console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
@@ -124,7 +137,13 @@ async function main() {
   // Handle process termination
   const shutdown = async (signal: string) => {
     logWithTimestamp(`🛑 Received ${signal}, shutting down gracefully...`);
+    shuttingDown = true;
     await sweepService.stop();
+    if (ongoingPromises.size > 0) {
+      logWithTimestamp(`⏳ Waiting for ${ongoingPromises.size} ongoing operations to complete...`);
+      await Promise.allSettled(ongoingPromises);
+      logWithTimestamp("✅ Ongoing operations completed");
+    }
     await client.destroy();
     logWithTimestamp("✅ Shutdown complete");
     process.exit(0);
