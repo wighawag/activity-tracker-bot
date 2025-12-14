@@ -150,7 +150,7 @@ async function main() {
               if (guildId && userId) {
                 if (interaction.user.id === userId) {
                   await interaction.reply({
-                    content: "Processing your leave request...",
+                    content: "Leave request akcnowledged",
                     flags: MessageFlags.Ephemeral,
                   });
                   try {
