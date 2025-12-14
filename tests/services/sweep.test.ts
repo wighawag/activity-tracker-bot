@@ -65,10 +65,10 @@ describe("SweepService", () => {
 
   it("should start and stop sweep process", async () => {
     sweepService.start();
-    expect(sweepService["sweepInterval"]).toBeDefined();
+    expect(sweepService["sweepTimeout"]).toBeDefined();
 
     await sweepService.stop();
-    expect(sweepService["sweepInterval"]).toBeNull();
+    expect(sweepService["sweepTimeout"]).toBeNull();
   });
 
   it("should process guild for role transitions", async () => {
