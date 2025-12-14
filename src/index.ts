@@ -184,7 +184,7 @@ async function main() {
 }
 
 /**
- * Sync all guild members to the database on startup
+ * Sync guild members who joined in the last hour to the database on startup
  */
 async function syncGuildMembers(
   client: Client,
@@ -193,6 +193,7 @@ async function syncGuildMembers(
   try {
     const guilds = await client.guilds.fetch();
     let totalMembers = 0;
+    const oneHourAgo = Date.now() - 60 * 60 * 1000; // 1 hour in milliseconds
 
     for (const guild of guilds.values()) {
       logWithTimestamp(
@@ -200,10 +201,21 @@ async function syncGuildMembers(
       );
       const fetchedGuild = await guild.fetch();
       const members = await fetchedGuild.members.fetch();
-      const memberIds = Array.from(members.keys());
+
+      // Filter to only members who joined in the last hour
+      const recentMembers = members.filter(
+        (member) =>
+          member.joinedTimestamp && member.joinedTimestamp > oneHourAgo,
+      );
+
+      const memberIds = Array.from(recentMembers.keys());
       totalMembers += memberIds.length;
 
-      // Ensure all members have roles
+      logWithTimestamp(
+        `📊 Found ${memberIds.length} members who joined in the last hour`,
+      );
+
+      // Ensure recent members have roles
       const roleManager = new RoleManagerService(createConfig(), repository);
       for (const memberId of memberIds) {
         try {
@@ -217,7 +229,7 @@ async function syncGuildMembers(
       }
     }
     logWithTimestamp(
-      `✅ Successfully synced ${totalMembers} guild members across ${guilds.size} guilds`,
+      `✅ Successfully synced ${totalMembers} recent guild members across ${guilds.size} guilds`,
     );
   } catch (error) {
     console.error("🚨 Error syncing guild members:", error);
