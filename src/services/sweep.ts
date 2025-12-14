@@ -10,7 +10,8 @@ export class SweepService {
   private repository: ActivityRepository;
   private roleManager: RoleManagerService;
   private notificationService: NotificationService;
-  private sweepInterval: Timer | null = null;
+  private sweepTimeout: NodeJS.Timeout | null = null;
+  private currentSweep: Promise<void> | null = null;
 
   constructor(
     config: Config,
@@ -30,25 +31,37 @@ export class SweepService {
    * Start the periodic sweep process
    */
   start(): void {
-    if (this.sweepInterval) {
+    if (this.sweepTimeout) {
       this.stop();
     }
 
-    // Run immediately and then on interval
-    this.runSweep().catch(console.error);
-    this.sweepInterval = setInterval(
-      () => this.runSweep().catch(console.error),
-      this.config.SWEEP_INTERVAL_MS,
-    );
+    this.runAndSchedule();
+  }
+
+  /**
+   * Run a sweep and schedule the next one
+   */
+  private runAndSchedule(): void {
+    const startTime = Date.now();
+    this.currentSweep = this.runSweep().catch(console.error);
+    this.currentSweep.finally(() => {
+      const elapsed = Date.now() - startTime;
+      const delay = Math.max(0, this.config.SWEEP_INTERVAL_MS - elapsed);
+      this.sweepTimeout = setTimeout(() => this.runAndSchedule(), delay);
+    });
   }
 
   /**
    * Stop the periodic sweep process
    */
-  stop(): void {
-    if (this.sweepInterval) {
-      clearInterval(this.sweepInterval);
-      this.sweepInterval = null;
+  async stop(): Promise<void> {
+    if (this.currentSweep) {
+      await this.currentSweep;
+      this.currentSweep = null;
+    }
+    if (this.sweepTimeout) {
+      clearTimeout(this.sweepTimeout);
+      this.sweepTimeout = null;
     }
   }
 

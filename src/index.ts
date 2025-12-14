@@ -17,6 +17,10 @@ async function main() {
   // Load configuration
   const config = createConfig();
 
+  // Graceful shutdown tracking
+  let shuttingDown = false;
+  const ongoingPromises = new Set<Promise<void>>();
+
   // Initialize database
   const repository = new SQLiteActivityRepository(config.DB_PATH);
   await repository.initialize();
@@ -73,61 +77,92 @@ async function main() {
     }
   });
 
-  client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
+  client.on("messageCreate", (message) => {
+    if (message.author.bot || shuttingDown) return;
 
-    try {
-      if (message.guild) {
-        // Update user activity
-        await sweepService.handleUserActivity(
-          message.guild.id,
-          message.author.id,
+    const handler = async () => {
+      try {
+        if (message.guild) {
+          // Update user activity
+          await sweepService.handleUserActivity(
+            message.guild.id,
+            message.author.id,
+          );
+
+          // Ensure user has a role
+          await roleManager.ensureUserHasRole(message.guild, message.author.id);
+        }
+      } catch (error) {
+        console.error(
+          `🚨 Error handling message from ${message.author.tag}:`,
+          error,
         );
-
-        // Ensure user has a role
-        await roleManager.ensureUserHasRole(message.guild, message.author.id);
       }
-    } catch (error) {
-      console.error(
-        `🚨 Error handling message from ${message.author.tag}:`,
-        error,
-      );
-    }
+    };
+
+    const promise = handler();
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
   });
 
-  client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-    try {
-      await kickCommand.handle(interaction);
-    } catch (error) {
-      console.error(`🚨 Error handling interaction:`, error);
-      if (interaction.isRepliable()) {
-        await interaction.reply({
-          content: "❌ An error occurred while processing your command.",
-          ephemeral: true,
-        });
+  client.on("interactionCreate", (interaction) => {
+    if (!interaction.isChatInputCommand() || shuttingDown) return;
+
+    const handler = async () => {
+      try {
+        await kickCommand.handle(interaction);
+      } catch (error) {
+        console.error(`🚨 Error handling interaction:`, error);
+        if (interaction.isRepliable()) {
+          await interaction.reply({
+            content: "❌ An error occurred while processing your command.",
+            ephemeral: true,
+          });
+        }
       }
-    }
+    };
+
+    const promise = handler();
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
   });
 
-  client.on("guildMemberAdd", async (member) => {
-    try {
-      logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
-      // Ensure new members get the active role
-      await roleManager.ensureUserHasRole(member.guild, member.id);
-      logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
-    } catch (error) {
-      console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
-    }
+  client.on("guildMemberAdd", (member) => {
+    if (shuttingDown) return;
+
+    const handler = async () => {
+      try {
+        logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
+        // Ensure new members get the active role
+        await roleManager.ensureUserHasRole(member.guild, member.id);
+        logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
+      } catch (error) {
+        console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
+      }
+    };
+
+    const promise = handler();
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
   });
 
   // Handle process termination
-  process.on("SIGINT", async () => {
-    logWithTimestamp("🛑 Received SIGINT, shutting down gracefully...");
-    sweepService.stop();
+  const shutdown = async (signal: string) => {
+    logWithTimestamp(`🛑 Received ${signal}, shutting down gracefully...`);
+    shuttingDown = true;
+    await sweepService.stop();
+    if (ongoingPromises.size > 0) {
+      logWithTimestamp(`⏳ Waiting for ${ongoingPromises.size} ongoing operations to complete...`);
+      await Promise.allSettled(ongoingPromises);
+      logWithTimestamp("✅ Ongoing operations completed");
+    }
     await client.destroy();
+    logWithTimestamp("✅ Shutdown complete");
     process.exit(0);
-  });
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 
   process.on("uncaughtException", (error) => {
     console.error("🚨 Uncaught exception:", error);
