@@ -46,12 +46,7 @@ export class RoleManagerService {
     const member = await guild.members.fetch({ user: userId });
     const roleMap = await this.ensureRolesExist(guild);
 
-    // Remove all activity roles first
-    for (const [name, role] of roleMap) {
-      await member.roles.remove(role);
-    }
-
-    // Add the appropriate role
+    // Determine the target role
     const targetRole = roleMap.get(
       roleName === "active"
         ? this.config.ACTIVE_ROLE_NAME
@@ -60,9 +55,31 @@ export class RoleManagerService {
           : this.config.DORMANT_ROLE_NAME,
     );
 
-    if (targetRole) {
-      await member.roles.add(targetRole);
+    if (!targetRole) {
+      throw new Error(`Target role for ${roleName} not found`);
     }
+
+    // Check if member already has the correct role
+    if (member.roles.cache.has(targetRole.id)) {
+      // Already has the role, just update database
+      await this.repository.upsertUser({
+        user_id: userId,
+        guild_id: guild.id,
+        last_activity: new Date(),
+        current_role: roleName,
+      });
+      return;
+    }
+
+    // Remove all activity roles except the target
+    for (const [name, role] of roleMap) {
+      if (role.id !== targetRole.id && member.roles.cache.has(role.id)) {
+        await member.roles.remove(role);
+      }
+    }
+
+    // Add the target role
+    await member.roles.add(targetRole);
 
     // Update database after successful role assignment
     await this.repository.upsertUser({
