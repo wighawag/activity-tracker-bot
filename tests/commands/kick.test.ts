@@ -7,6 +7,7 @@ describe("KickCommand", () => {
   let mockClient: any;
   let mockRepository: any;
   let mockRoleManager: any;
+  let mockNotificationService: any;
   let kickCommand: KickCommand;
 
   beforeEach(() => {
@@ -26,11 +27,17 @@ describe("KickCommand", () => {
     // Mock role manager
     mockRoleManager = {};
 
+    // Mock notification service
+    mockNotificationService = {
+      sendKickNotification: mock(() => Promise.resolve()),
+    };
+
     kickCommand = new KickCommand(
       mockConfig,
       mockClient,
       mockRepository,
       mockRoleManager,
+      mockNotificationService,
     );
   });
 
@@ -135,6 +142,10 @@ describe("KickCommand", () => {
     await kickCommand.handle(mockInteraction);
 
     expect(mockGuild.members.fetch).toHaveBeenCalledWith("user1");
+    expect(mockNotificationService.sendKickNotification).toHaveBeenCalledWith(
+      "guild123",
+      "user1",
+    );
     expect(kickMock).toHaveBeenCalled();
     expect(editReplyMock).toHaveBeenCalledWith(
       "✅ Successfully kicked 1 dormant users.",

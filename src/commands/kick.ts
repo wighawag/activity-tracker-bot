@@ -3,23 +3,27 @@ import type { Config } from "../config";
 import type { Client } from "discord.js";
 import type { ActivityRepository } from "../types";
 import { RoleManagerService } from "../services/roles";
+import { NotificationService } from "../services/notifications";
 
 export class KickCommand {
   private config: Config;
   private client: Client;
   private repository: ActivityRepository;
   private roleManager: RoleManagerService;
+  private notificationService: NotificationService;
 
   constructor(
     config: Config,
     client: Client,
     repository: ActivityRepository,
     roleManager: RoleManagerService,
+    notificationService: NotificationService,
   ) {
     this.config = config;
     this.client = client;
     this.repository = repository;
     this.roleManager = roleManager;
+    this.notificationService = notificationService;
   }
 
   async handle(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -70,6 +74,20 @@ export class KickCommand {
           if (member.permissions.has("Administrator")) {
             console.log(`Skipping admin user ${user.user_id}`);
             continue;
+          }
+
+          // Send DM notification before kicking
+          try {
+            await this.notificationService.sendKickNotification(
+              guild.id,
+              user.user_id,
+            );
+          } catch (notificationError) {
+            console.error(
+              `Failed to send kick notification to ${user.user_id}:`,
+              notificationError,
+            );
+            // Continue with kick even if notification fails
           }
 
           await member.kick("Dormant user (no activity for 30+ days)");

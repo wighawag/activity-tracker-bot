@@ -48,7 +48,13 @@ async function main() {
     notificationService,
   );
 
-  const kickCommand = new KickCommand(config, client, repository, roleManager);
+  const kickCommand = new KickCommand(
+    config,
+    client,
+    repository,
+    roleManager,
+    notificationService,
+  );
 
   logWithTimestamp("🛠️  Services initialized");
 

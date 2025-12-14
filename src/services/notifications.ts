@@ -74,6 +74,21 @@ To regain your **Active** status, simply send a message in any channel, click th
   }
 
   /**
+   * Send notification when user is being kicked
+   */
+  async sendKickNotification(guildId: string, userId: string): Promise<void> {
+    const guild = await this.client.guilds.fetch(guildId);
+    const message = {
+      content: `🚨 You have been **kicked** from **${guild.name}**.
+You were marked as dormant due to no activity for 30+ days.
+
+You can rejoin the server at any time.`,
+    };
+
+    await this.sendNotification(guildId, userId, message);
+  }
+
+  /**
    * Generic notification sender with fallback to channel
    */
   private async sendNotification(
