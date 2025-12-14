@@ -1,4 +1,5 @@
 import type { ChatInputCommandInteraction } from "discord.js";
+import { MessageFlags } from "discord.js";
 import type { Config } from "../config";
 import type { Client } from "discord.js";
 import type { ActivityRepository } from "../types";
@@ -39,7 +40,7 @@ export class KickCommand {
       return;
     }
 
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       const guild = interaction.guild;
