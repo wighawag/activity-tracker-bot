@@ -149,9 +149,6 @@ async function main() {
               const userId = parts[2];
               if (guildId && userId) {
                 if (interaction.user.id === userId) {
-                  await interaction.deferReply({
-                    flags: MessageFlags.Ephemeral,
-                  });
                   try {
                     const guild =
                       await interaction.client.guilds.fetch(guildId);
@@ -159,14 +156,28 @@ async function main() {
                       userId,
                       "User chose to leave via button",
                     );
-                    await interaction.editReply({
-                      content: "You have been removed from the server.",
-                    });
+                    // Try to reply, but if it fails (user kicked, interaction invalid), just log
+                    try {
+                      await interaction.reply({
+                        content: "You have been removed from the server.",
+                        flags: MessageFlags.Ephemeral,
+                      });
+                    } catch (replyError) {
+                      console.log(
+                        "Could not reply to user (likely kicked):",
+                        replyError,
+                      );
+                    }
                   } catch (error) {
                     console.error("Error kicking user:", error);
-                    await interaction.editReply({
-                      content: "❌ Failed to remove you from the server.",
-                    });
+                    try {
+                      await interaction.reply({
+                        content: "❌ Failed to remove you from the server.",
+                        flags: MessageFlags.Ephemeral,
+                      });
+                    } catch (replyError) {
+                      console.log("Could not reply error to user:", replyError);
+                    }
                   }
                 } else {
                   if (interaction.isRepliable()) {
