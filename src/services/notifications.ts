@@ -1,5 +1,5 @@
 import type { Config } from "../config";
-import type { Client, Guild, TextChannel } from "discord.js";
+import type { Client, Guild, TextChannel, ThreadChannel } from "discord.js";
 
 export class NotificationService {
   private config: Config;
@@ -88,8 +88,16 @@ To regain your **Active** status, simply send a message in any channel or contac
                 this.config.FALLBACK_CHANNEL_ID,
               );
               if (channel?.isTextBased()) {
-                await (channel as TextChannel).send({
-                  content: `📢 Notification for <@${userId}>:\n${message.content}`,
+                const textChannel = channel as TextChannel;
+                const thread = await textChannel.threads.create({
+                  name: `Notification for ${userId}`,
+                  type: 12, // PrivateThread
+                  invitable: false,
+                });
+                await thread.members.add(userId);
+                await thread.send({
+                  content: message.content,
+                  components: message.components,
                 });
               }
             } catch (channelError) {
