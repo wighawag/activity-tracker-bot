@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials } from "discord.js";
+import { Client, GatewayIntentBits, Partials, MessageFlags } from "discord.js";
 import { createConfig } from "./config";
 import { SQLiteActivityRepository } from "./db/repository";
 import { RoleManagerService } from "./services/roles";
@@ -121,7 +121,7 @@ async function main() {
                   await interaction.reply({
                     content:
                       "✅ Your activity has been updated! You should now have the Active role back.",
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                   });
                 }
               }
@@ -133,7 +133,7 @@ async function main() {
         if (interaction.isRepliable()) {
           await interaction.reply({
             content: "❌ An error occurred while processing your interaction.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
       }
