@@ -21,6 +21,17 @@ async function main() {
   let shuttingDown = false;
   const ongoingPromises = new Set<Promise<void>>();
 
+  // Helper to track ongoing async operations
+  function trackAsyncOperation<T extends any[], R>(
+    fn: (...args: T) => Promise<R>,
+    ...args: T
+  ): Promise<R> {
+    const promise = fn(...args);
+    ongoingPromises.add(promise);
+    promise.finally(() => ongoingPromises.delete(promise));
+    return promise;
+  }
+
   // Initialize database
   const repository = new SQLiteActivityRepository(config.DB_PATH);
   await repository.initialize();
@@ -83,17 +94,18 @@ async function main() {
     try {
       if (message.guild) {
         // Update user activity
-        const activityPromise = sweepService.handleUserActivity(
+        trackAsyncOperation(
+          sweepService.handleUserActivity,
           message.guild.id,
           message.author.id,
         );
-        ongoingPromises.add(activityPromise);
-        activityPromise.finally(() => ongoingPromises.delete(activityPromise));
 
         // Ensure user has a role
-        const rolePromise = roleManager.ensureUserHasRole(message.guild, message.author.id);
-        ongoingPromises.add(rolePromise);
-        rolePromise.finally(() => ongoingPromises.delete(rolePromise));
+        trackAsyncOperation(
+          roleManager.ensureUserHasRole,
+          message.guild,
+          message.author.id,
+        );
       }
     } catch (error) {
       console.error(
@@ -106,9 +118,7 @@ async function main() {
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand() || shuttingDown) return;
     try {
-      const commandPromise = kickCommand.handle(interaction);
-      ongoingPromises.add(commandPromise);
-      commandPromise.finally(() => ongoingPromises.delete(commandPromise));
+      trackAsyncOperation(kickCommand.handle, interaction);
     } catch (error) {
       console.error(`🚨 Error handling interaction:`, error);
       if (interaction.isRepliable()) {
@@ -125,9 +135,7 @@ async function main() {
     try {
       logWithTimestamp(`🆕 New member joined: ${member.user.tag}`);
       // Ensure new members get the active role
-      const rolePromise = roleManager.ensureUserHasRole(member.guild, member.id);
-      ongoingPromises.add(rolePromise);
-      rolePromise.finally(() => ongoingPromises.delete(rolePromise));
+      trackAsyncOperation(roleManager.ensureUserHasRole, member.guild, member.id);
       logWithTimestamp(`✅ Assigned active role to ${member.user.tag}`);
     } catch (error) {
       console.error(`🚨 Error handling new member ${member.user.tag}:`, error);
