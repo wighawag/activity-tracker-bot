@@ -32,16 +32,16 @@ If you do one activity, any activity, you are considered part of the community a
 
 **Note:** The Inactive role may restrict access to some channels.
 
-To regain your **Active** status, simply send a message in any channel or click the button below!`;
+To regain your **Active** status, simply send a message in any channel or click the "Keep Me Active" button below. If you prefer to leave the server immediately, click the "Leave Server" button.`;
     } else {
       content = `📢 You have been marked as **Inactive** in **${guild.name}**.
 You haven't sent any messages in the last ${this.config.INACTIVE_AFTER_MS / 86400000} days.
 
-After ${daysToDormant} more days (${this.config.DORMANT_AFTER_MS / 86400000} days total), you will be considered **Dormant** and eligible for server removal unless you perform some activity (including clicking the button below).
+After ${daysToDormant} more days (${this.config.DORMANT_AFTER_MS / 86400000} days total), you will be considered **Dormant** and eligible for server removal unless you perform some activity (including clicking the "Keep Me Active" button below).
 
 **Note:** The Inactive role may restrict access to some channels.
 
-To regain your **Active** status, simply send a message in any channel or click the button below!`;
+To regain your **Active** status, simply send a message in any channel or click the "Keep Me Active" button below. If you prefer to leave the server immediately, click the "Leave Server" button.`;
     }
 
     const message = {
@@ -82,7 +82,7 @@ To regain your **Active** status, simply send a message in any channel or click 
       content: `🚨 You have been marked as **Dormant** in **${guild.name}**.
 You haven't sent any messages in the last ${this.config.DORMANT_AFTER_MS / 86400000} days.
 
-To regain your **Active** status, simply send a message in any channel, click the button below, or contact a moderator.`,
+To regain your **Active** status, simply send a message in any channel, click the "Keep Me Active" button below, or contact a moderator. If you prefer to leave the server immediately, click the "Leave Server" button.`,
       components: [
         {
           type: 1,
