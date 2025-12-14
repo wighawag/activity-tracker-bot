@@ -116,13 +116,23 @@ async function main() {
               const guildId = parts[1];
               const userId = parts[2];
               if (guildId && userId) {
-                await sweepService.handleUserActivity(guildId, userId);
-                if (interaction.isRepliable()) {
-                  await interaction.reply({
-                    content:
-                      "✅ Your activity has been updated! You should now have the Active role back.",
-                    flags: MessageFlags.Ephemeral,
-                  });
+                if (interaction.user.id === userId) {
+                  await sweepService.handleUserActivity(guildId, userId);
+                  if (interaction.isRepliable()) {
+                    await interaction.reply({
+                      content:
+                        "✅ Your activity has been updated! You should now have the Active role back.",
+                      flags: MessageFlags.Ephemeral,
+                    });
+                  }
+                } else {
+                  if (interaction.isRepliable()) {
+                    await interaction.reply({
+                      content:
+                        "❌ This button is not for you. Only the targeted user can use it.",
+                      flags: MessageFlags.Ephemeral,
+                    });
+                  }
                 }
               }
             }

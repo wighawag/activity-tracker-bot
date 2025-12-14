@@ -70,7 +70,7 @@ export class SweepService {
    * Run a single sweep to check for inactive users
    */
   async runSweep(): Promise<void> {
-    logWithTimestamp("🔄 running sweep...");
+    logWithTimestamp("🧹 running sweep...");
     try {
       const guilds = await this.client.guilds.fetch();
 
